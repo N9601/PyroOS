@@ -13,7 +13,7 @@ all: $(BUILD)/boot.bin
 # metadata, just the raw 512 bytes the BIOS expects.
 $(BUILD)/boot.bin: boot/boot.asm
 	@mkdir -p $(BUILD)
-	nasm -f bin $< -o $@
+	nasm -f bin -I boot/ $< -o $@
 	@echo "Built $@ ($$(stat -c%s $@) bytes)"
 
 # Boot it in QEMU. -drive ...format=raw tells QEMU this file is a raw disk
