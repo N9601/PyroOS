@@ -1,0 +1,10 @@
+# PyroOS is edited on Windows but built inside WSL (Linux).
+# Force LF in the working tree for all text files so make/nasm/gcc never
+# choke on stray carriage returns.
+* text=auto eol=lf
+*.asm text eol=lf
+*.c   text eol=lf
+*.h   text eol=lf
+Makefile text eol=lf
+*.png binary
+*.bin binary
