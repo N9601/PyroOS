@@ -6,9 +6,12 @@ The goal: an OS small enough to understand end to end. Every interrupt vector, e
 
 ## Status
 
-Milestone 2 complete: the boot sector prints in 16-bit real mode, then switches
-the CPU to 32-bit protected mode (GDT, A20, far jump) and prints again by writing
-directly to VGA memory.
+Milestone 3 complete: the boot sector loads a kernel from disk, switches the CPU
+to 32-bit protected mode, and jumps into a kernel written in C. The C kernel
+prints to the screen by writing directly to VGA memory.
+
+Layout: `boot/` holds the assembly boot sector and its pieces; `kernel/` holds
+the C kernel, its entry stub, and the linker script.
 
 ## Toolchain
 
@@ -16,7 +19,10 @@ Built inside WSL2 (Ubuntu 24.04):
 
 - NASM (assembler)
 - QEMU (`qemu-system-i386`, emulator)
-- GCC / an `i686-elf` cross-compiler (added at Milestone 3, for the C kernel)
+- GCC with 32-bit multilib, used in freestanding mode (`-m32 -ffreestanding
+  -nostdlib`) to compile the C kernel. A dedicated `i686-elf` cross-compiler is
+  an optional future upgrade; the freestanding host compiler produces the same
+  bare-metal 32-bit code.
 
 ## Build and run
 
@@ -31,6 +37,6 @@ make run    # boot it in QEMU
 
 1. Boot sector: BIOS handoff, real mode, print via BIOS interrupts. (done)
 2. Protected mode: GDT, A20 line, far jump to 32-bit. (done)
-3. C kernel: linker script, handoff from assembly to C, VGA text driver.
-4. Interrupts: IDT, PIC, keyboard and timer handlers.
+3. C kernel: linker script, handoff from assembly to C, VGA text driver. (done)
+4. Interrupts: IDT, PIC, keyboard and timer handlers. (next)
 5. Beyond: paging, memory management, a scheduler.
