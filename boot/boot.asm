@@ -11,6 +11,9 @@
 [org 0x7c00]
 [bits 16]
 
+KERNEL_OFFSET equ 0x1000    ; where we load the kernel in memory. The linker
+                            ; script builds the kernel to run at this address.
+
 start:
     mov [BOOT_DRIVE], dl     ; save BIOS boot drive for later use
 
@@ -24,6 +27,13 @@ start:
 
     mov bx, MSG_REAL_MODE
     call print_string       ; still using BIOS teletype -- we're in real mode
+
+    ; Load the kernel from disk into memory at KERNEL_OFFSET, while the BIOS
+    ; is still available. ES:BX = 0x0000:0x1000 is the destination.
+    mov bx, KERNEL_OFFSET
+    mov dh, 15              ; number of sectors to load (plenty for now)
+    mov dl, [BOOT_DRIVE]    ; read from the drive we booted from
+    call disk_load
 
     call switch_to_pm       ; leave real mode. This never returns: it ends in
                             ; a far jump into 32-bit code (init_pm -> BEGIN_PM).
@@ -52,6 +62,7 @@ print_string:
 ;  this must fit within the 512-byte sector alongside the code above.
 ; ----------------------------------------------------------------------------
 %include "gdt.asm"          ; the Global Descriptor Table
+%include "disk.asm"         ; disk_load (read kernel sectors via BIOS)
 %include "switch_pm.asm"    ; switch_to_pm + init_pm (the actual transition)
 %include "print_pm.asm"     ; print_pm (VGA memory printer)
 
@@ -63,7 +74,11 @@ print_string:
 BEGIN_PM:
     mov ebx, MSG_PROT_MODE
     call print_pm           ; write straight to VGA memory at 0xB8000
-    jmp $                   ; hang: milestone 2 ends here
+
+    call KERNEL_OFFSET      ; jump into the kernel we loaded at 0x1000. Its
+                            ; first byte is the _start stub, which calls kmain.
+
+    jmp $                   ; if the kernel returns, halt here
 
 ; ----------------------------------------------------------------------------
 ;  Data
