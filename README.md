@@ -6,7 +6,9 @@ The goal: an OS small enough to understand end to end. Every interrupt vector, e
 
 ## Status
 
-Milestone 1: stage 1 boot sector. Prints a banner in 16-bit real mode, then halts.
+Milestone 2 complete: the boot sector prints in 16-bit real mode, then switches
+the CPU to 32-bit protected mode (GDT, A20, far jump) and prints again by writing
+directly to VGA memory.
 
 ## Toolchain
 
@@ -28,7 +30,7 @@ make run    # boot it in QEMU
 ## Roadmap
 
 1. Boot sector: BIOS handoff, real mode, print via BIOS interrupts. (done)
-2. Protected mode: GDT, A20 line, far jump to 32-bit.
+2. Protected mode: GDT, A20 line, far jump to 32-bit. (done)
 3. C kernel: linker script, handoff from assembly to C, VGA text driver.
 4. Interrupts: IDT, PIC, keyboard and timer handlers.
 5. Beyond: paging, memory management, a scheduler.
