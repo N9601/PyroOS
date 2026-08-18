@@ -9,15 +9,10 @@
 #include "usermode.h"
 #include "syscall.h"
 #include "screen.h"
+#include "context.h"
 
 #include <stdint.h>
 
-typedef struct {
-    uint32_t ebx, esi, edi, ebp, esp, eip, eflags;
-} ctx_t;
-
-extern int  save_context(ctx_t *ctx);
-extern void restore_context(ctx_t *ctx);
 extern void enter_user_mode(void (*entry)(void), uint32_t user_esp);
 
 static ctx_t   kernel_ctx;

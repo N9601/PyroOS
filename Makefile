@@ -85,7 +85,12 @@ $(BUILD)/os-image.bin: $(BUILD)/boot.bin $(BUILD)/kernel.bin
 	@echo "Built $@ (kernel: $$(stat -c%s $(BUILD)/kernel.bin) bytes)"
 
 run: all
-	qemu-system-i386 -drive format=raw,file=$(BUILD)/os-image.bin
+	qemu-system-i386 -drive format=raw,file=$(BUILD)/os-image.bin -display gtk
+
+# Alternative display: under WSLg the SDL backend often forwards keyboard
+# input more reliably than GTK. Try this if you can see PyroOS but can't type.
+run-sdl: all
+	qemu-system-i386 -drive format=raw,file=$(BUILD)/os-image.bin -display sdl
 
 clean:
 	rm -rf $(BUILD)

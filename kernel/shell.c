@@ -17,6 +17,8 @@
 #include "task.h"
 #include "syscall.h"
 #include "usermode.h"
+#include "isr.h"
+#include "context.h"
 
 #include <stdint.h>
 
@@ -66,6 +68,7 @@ static void cmd_help(void)
     kprint("  spin          preemptive multitasking demo\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
     kprint("  user          run a program in ring 3 (user mode)\n");
+    kprint("  fault         trigger and recover from a page fault\n");
     kprint("  reboot        restart the machine\n");
 }
 
@@ -127,6 +130,20 @@ static void execute(const char *cmd)
     } else if (streq(cmd, "user")) {
         kprint("  dropping to ring 3 (user mode)...\n");
         run_user_program();
+    } else if (streq(cmd, "fault")) {
+        kprint("  reading unmapped memory at 0x00800000 (above the 4 MB map)...\n");
+        /* save_context is called directly here so its stack frame survives
+           until the fault; fault_arm makes the page-fault handler unwind to it. */
+        if (save_context(&fault_recovery_ctx) == 0) {
+            fault_arm();
+            volatile int v = *(volatile int *)0x00800000;   /* page fault */
+            (void)v;
+            kprint("  (no fault occurred?)\n");
+        } else {
+            kprint_color("  recovered! the shell is still alive.\n",
+                         COLOR_GREEN_ON_BLACK);
+        }
+        fault_disarm();
     } else if (streq(cmd, "reboot")) {
         reboot();
     } else if (streq(cmd, "echo")) {

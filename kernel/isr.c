@@ -5,6 +5,7 @@
 #include "idt.h"
 #include "ports.h"
 #include "screen.h"
+#include "context.h"
 
 /* The 48 stubs from interrupt.asm. */
 extern void isr0(void);  extern void isr1(void);  extern void isr2(void);  extern void isr3(void);
@@ -103,11 +104,53 @@ void isr_install(void)
     idt_set_gate(47, (uint32_t)irq15, 0x08, 0x8E);
 }
 
-/* Called from isr_common_stub for CPU exceptions. For now, report and halt. */
+static const char *exception_names[32] = {
+    "divide by zero", "debug", "non-maskable interrupt", "breakpoint",
+    "overflow", "bound range exceeded", "invalid opcode", "device not available",
+    "double fault", "coprocessor segment overrun", "invalid TSS",
+    "segment not present", "stack-segment fault", "general protection fault",
+    "page fault", "reserved", "x87 floating-point", "alignment check",
+    "machine check", "SIMD floating-point", "virtualization", "control protection",
+    "reserved", "reserved", "reserved", "reserved", "reserved", "reserved",
+    "hypervisor injection", "VMM communication", "security", "reserved"
+};
+
+/* Fault recovery: when armed, a CPU exception unwinds back to the saved
+   context instead of halting. The caller must save the context itself (with
+   save_context) in a stack frame that survives until the fault, then arm. */
+ctx_t               fault_recovery_ctx;
+static volatile int fault_armed = 0;
+
+void fault_arm(void)    { fault_armed = 1; }
+void fault_disarm(void) { fault_armed = 0; }
+
+/* Called from isr_common_stub for CPU exceptions. Reports the fault; if
+   recovery is armed, unwinds back to the caller, otherwise halts. */
 void isr_handler(registers_t *r)
 {
-    kprint_color("PyroOS: unhandled CPU exception. Halting.\n", COLOR_RED_ON_BLACK);
-    (void)r;
+    kprint_color("\n  [CPU exception] ", COLOR_RED_ON_BLACK);
+    if (r->int_no < 32)
+        kprint_color(exception_names[r->int_no], COLOR_RED_ON_BLACK);
+    kprint_color(" (int ", COLOR_RED_ON_BLACK);
+    kprint_dec(r->int_no);
+    kprint_color(")\n", COLOR_RED_ON_BLACK);
+
+    if (r->int_no == 14) {                      /* page fault: CR2 holds the address */
+        uint32_t cr2;
+        __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
+        kprint_color("  faulting address ", COLOR_RED_ON_BLACK);
+        kprint_hex(cr2);
+        kprint_color(", error code ", COLOR_RED_ON_BLACK);
+        kprint_hex(r->err_code);
+        kprint_char('\n');
+    }
+
+    if (fault_armed) {
+        fault_armed = 0;
+        restore_context(&fault_recovery_ctx);   /* recover: never returns here */
+    }
+
+    kprint_color("  no handler armed; halting.\n", COLOR_RED_ON_BLACK);
     for (;;)
         __asm__ volatile("hlt");
 }
