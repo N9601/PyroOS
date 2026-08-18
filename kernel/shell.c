@@ -11,6 +11,7 @@
 #include "kheap.h"
 #include "timer.h"
 #include "ports.h"
+#include "ata.h"
 
 #include <stdint.h>
 
@@ -87,6 +88,16 @@ static void execute(const char *cmd)
         kprint("  timer ticks since boot: ");
         kprint_dec(timer_ticks());
         kprint_char('\n');
+    } else if (streq(cmd, "disk")) {
+        static uint8_t sec[512];
+        if (ata_read(0, 1, sec) == 0) {
+            kprint("  read LBA 0, signature ");
+            kprint_hex((uint32_t)(sec[510] | (sec[511] << 8)));
+            kprint((sec[510] == 0x55 && sec[511] == 0xAA)
+                       ? "  (valid boot sector)\n" : "\n");
+        } else {
+            kprint_color("  disk read failed\n", COLOR_RED_ON_BLACK);
+        }
     } else if (streq(cmd, "reboot")) {
         reboot();
     } else if (streq(cmd, "echo")) {

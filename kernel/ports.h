@@ -25,4 +25,18 @@ static inline void outb(uint16_t port, uint8_t value)
     __asm__ volatile("outb %0, %1" : : "a"(value), "Nd"(port));
 }
 
+/* Read one 16-bit word (used for the ATA data register). */
+static inline uint16_t inw(uint16_t port)
+{
+    uint16_t result;
+    __asm__ volatile("inw %1, %0" : "=a"(result) : "Nd"(port));
+    return result;
+}
+
+/* Write one 16-bit word. */
+static inline void outw(uint16_t port, uint16_t value)
+{
+    __asm__ volatile("outw %0, %1" : : "a"(value), "Nd"(port));
+}
+
 #endif
