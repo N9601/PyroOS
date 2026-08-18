@@ -60,7 +60,8 @@ static void cmd_help(void)
     kprint("  mem           test the heap allocator\n");
     kprint("  ticks         timer ticks since boot\n");
     kprint("  disk          check the boot disk\n");
-    kprint("  tasks         run the multitasking demo\n");
+    kprint("  tasks         cooperative multitasking demo\n");
+    kprint("  spin          preemptive multitasking demo\n");
     kprint("  reboot        restart the machine\n");
 }
 
@@ -109,6 +110,9 @@ static void execute(const char *cmd)
     } else if (streq(cmd, "tasks")) {
         kprint("  three tasks yield in turn (round-robin):\n");
         tasking_demo();
+    } else if (streq(cmd, "spin")) {
+        kprint("  two non-yielding tasks, preempted by the timer (~2s):\n");
+        preempt_demo();
     } else if (streq(cmd, "reboot")) {
         reboot();
     } else if (streq(cmd, "echo")) {

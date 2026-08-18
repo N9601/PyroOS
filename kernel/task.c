@@ -13,6 +13,7 @@
  * ==========================================================================*/
 #include "task.h"
 #include "screen.h"
+#include "timer.h"
 
 #include <stdint.h>
 
@@ -30,6 +31,10 @@ static task_t  tasks[MAX_TASKS];
 static uint8_t stacks[MAX_TASKS][STACK_SIZE] __attribute__((aligned(16)));
 static int     num_tasks = 0;
 static int     current   = 0;
+
+/* Preemptive-mode state (Milestone 9). */
+static volatile int      preempt_enabled = 0;
+static volatile uint32_t deadline        = 0;
 
 static int task_create(void (*entry)(void))
 {
@@ -112,4 +117,69 @@ void tasking_demo(void)
     kprint("  ");
     task_yield();                /* dive into the workers; returns when done */
     kprint("\n  all tasks finished, back in the shell.\n");
+}
+
+/* ============================================================================
+ *  Milestone 9: preemptive scheduling
+ * ----------------------------------------------------------------------------
+ *  preempt_tick() is called from the timer interrupt on every tick. While
+ *  preemption is armed it forcibly switches to the next task -- the running
+ *  task does not have to cooperate. At the deadline it switches back to the
+ *  scheduler task (0) and disarms.
+ * ==========================================================================*/
+static volatile uint32_t work_a = 0;
+static volatile uint32_t work_b = 0;
+
+/* Two tasks that never yield: they just count forever. Preemption is the only
+   thing that can take the CPU away from them. */
+static void pworker_a(void) { __asm__ volatile("sti"); for (;;) work_a++; }
+static void pworker_b(void) { __asm__ volatile("sti"); for (;;) work_b++; }
+
+void preempt_tick(void)
+{
+    if (!preempt_enabled)
+        return;
+
+    if (timer_ticks() >= deadline) {
+        /* Time's up: stop the workers and return to the scheduler task. */
+        preempt_enabled = 0;
+        for (int i = 1; i < num_tasks; i++)
+            tasks[i].active = 0;
+        int prev = current;
+        if (prev != 0) {
+            current = 0;
+            context_switch(&tasks[prev].esp, tasks[0].esp);
+        }
+        return;
+    }
+
+    task_yield();                /* forcibly rotate to the next worker */
+}
+
+void preempt_demo(void)
+{
+    work_a = 0;
+    work_b = 0;
+
+    num_tasks = 0;
+    tasks[0].active = 0;         /* task 0 is the scheduler, not a worker */
+    tasks[0].esp    = 0;
+    num_tasks       = 1;
+    current         = 0;
+
+    task_create(pworker_a);
+    task_create(pworker_b);
+
+    deadline = timer_ticks() + 100;   /* run for ~2 seconds at 50 Hz */
+    preempt_enabled = 1;
+
+    /* Sleep until the timer-driven scheduler brings us back at the deadline.
+       While we sleep here, the timer keeps stealing the CPU to run the two
+       workers -- that is preemption. */
+    while (preempt_enabled)
+        __asm__ volatile("hlt");
+
+    kprint("  task A counted to "); kprint_dec(work_a); kprint_char('\n');
+    kprint("  task B counted to "); kprint_dec(work_b); kprint_char('\n');
+    kprint("  neither task ever yielded: the timer preempted them.\n");
 }

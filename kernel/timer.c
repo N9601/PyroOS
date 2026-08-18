@@ -7,6 +7,7 @@
 #include "timer.h"
 #include "isr.h"
 #include "ports.h"
+#include "task.h"
 
 static volatile uint32_t tick = 0;
 
@@ -14,6 +15,7 @@ static void timer_callback(registers_t *r)
 {
     (void)r;
     tick++;
+    preempt_tick();     /* drive preemptive scheduling when it is armed */
 }
 
 uint32_t timer_ticks(void)
