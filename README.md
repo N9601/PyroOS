@@ -14,8 +14,8 @@ via a hand-written ATA driver, and a preemptive scheduler multitasks with real
 context switching. Programs can run in ring 3 (user mode) and reach the kernel
 only through int 0x80 system calls.
 
-Shell commands: `help`, `about`, `clear`, `echo`, `ls`, `write`, `cat`, `mem`,
-`ticks`, `disk`, `tasks`, `spin`, `syscall`, `user`, `fault`, `reboot`.
+Shell commands: `help`, `about`, `clear`, `logo`, `echo`, `ls`, `write`, `cat`,
+`mem`, `ticks`, `disk`, `tasks`, `spin`, `syscall`, `user`, `fault`, `reboot`.
 
 Run it: `make run` (or `make run-sdl` if the GTK window won't take keyboard
 input under WSLg).
@@ -57,3 +57,4 @@ make run    # boot it in QEMU
 9. Preemptive scheduling: the timer forcibly switches tasks. (done)
 10. User mode: ring 3, a TSS, and system calls. (done)
 11. Fault handling: exception reporting and page-fault recovery. (done)
+12. A pixel-art flame logo (boot splash + `logo` command). (done)
