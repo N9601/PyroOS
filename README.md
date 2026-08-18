@@ -6,15 +6,18 @@ The goal: an OS small enough to understand end to end. Every interrupt vector, e
 
 ## Status
 
-Milestone 4 complete: PyroOS is interactive. On top of the boot sector,
-protected-mode switch, and C kernel, it now installs an interrupt descriptor
-table, remaps the PIC, and runs timer (IRQ0) and PS/2 keyboard (IRQ1) drivers.
-Typed characters echo to the screen through a VGA text driver with a scrolling
-cursor.
+Milestone 7 complete: PyroOS is a small but real operating system. It boots from
+a custom bootloader, runs a C kernel in 32-bit protected mode, has virtual memory
+(paging) and a heap, handles interrupts, and runs timer and keyboard drivers. An
+interactive shell accepts commands, and a filesystem (PyroFS) stores files on
+disk via a hand-written ATA driver.
+
+Shell commands: `help`, `about`, `clear`, `echo`, `ls`, `write`, `cat`, `mem`,
+`ticks`, `disk`, `reboot`.
 
 Layout: `boot/` holds the assembly boot sector and its pieces; `kernel/` holds
-the C kernel, the screen and interrupt code, the keyboard and timer drivers, the
-entry stub, and the linker script.
+the C kernel and all subsystems (screen, interrupts, paging, heap, drivers,
+filesystem, shell), the entry stub, and the linker script.
 
 ## Toolchain
 
@@ -42,4 +45,7 @@ make run    # boot it in QEMU
 2. Protected mode: GDT, A20 line, far jump to 32-bit. (done)
 3. C kernel: linker script, handoff from assembly to C, VGA text driver. (done)
 4. Interrupts: IDT, PIC, keyboard and timer handlers. (done)
-5. Beyond: paging, memory management, a scheduler. (next)
+5. Memory: paging (virtual memory) and a kernel heap. (done)
+6. Shell: an interactive command line. (done)
+7. Storage: ATA disk driver and the PyroFS filesystem. (done)
+8. Multitasking: a scheduler and context switching. (next)
