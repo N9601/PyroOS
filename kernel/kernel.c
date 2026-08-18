@@ -10,6 +10,7 @@
 #include "kheap.h"
 #include "timer.h"
 #include "keyboard.h"
+#include "fs.h"
 #include "shell.h"
 
 void kmain(void)
@@ -22,8 +23,9 @@ void kmain(void)
     heap_install();         /* dynamic memory (kmalloc/kfree) */
     timer_install(50);      /* 50 Hz system timer */
     keyboard_install();     /* keyboard IRQ + input buffer */
+    fs_init();              /* mount the filesystem (format the disk if new) */
 
-    kprint("Subsystems: interrupts, paging, heap, timer, keyboard.\n");
+    kprint("Subsystems: interrupts, paging, heap, timer, keyboard, fs.\n");
 
     __asm__ volatile("sti");/* enable interrupts */
 

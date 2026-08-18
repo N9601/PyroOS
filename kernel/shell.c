@@ -12,6 +12,8 @@
 #include "timer.h"
 #include "ports.h"
 #include "ata.h"
+#include "fs.h"
+#include "string.h"
 
 #include <stdint.h>
 
@@ -51,8 +53,12 @@ static void cmd_help(void)
     kprint("  about         what PyroOS is\n");
     kprint("  clear         clear the screen\n");
     kprint("  echo <text>   print text back\n");
+    kprint("  ls            list files\n");
+    kprint("  write <f> <t> write text t to file f\n");
+    kprint("  cat <f>       print file f\n");
     kprint("  mem           test the heap allocator\n");
     kprint("  ticks         timer ticks since boot\n");
+    kprint("  disk          check the boot disk\n");
     kprint("  reboot        restart the machine\n");
 }
 
@@ -105,6 +111,34 @@ static void execute(const char *cmd)
     } else if (starts_with(cmd, "echo ")) {
         kprint(cmd + 5);
         kprint_char('\n');
+    } else if (streq(cmd, "ls")) {
+        fs_list();
+    } else if (starts_with(cmd, "write ")) {
+        const char *p = cmd + 6;
+        while (*p == ' ') p++;
+        char name[24];
+        int i = 0;
+        while (*p && *p != ' ' && i < 23) name[i++] = *p++;
+        name[i] = '\0';
+        while (*p == ' ') p++;                       /* p now points at the text */
+        if (name[0] == '\0') {
+            kprint("usage: write <file> <text>\n");
+        } else if (fs_write(name, p, strlen(p)) == 0) {
+            kprint("  wrote "); kprint(name); kprint_char('\n');
+        } else {
+            kprint_color("  write failed\n", COLOR_RED_ON_BLACK);
+        }
+    } else if (starts_with(cmd, "cat ")) {
+        const char *name = cmd + 4;
+        while (*name == ' ') name++;
+        static char fbuf[4096];
+        uint32_t sz = 0;
+        if (fs_read(name, fbuf, sizeof(fbuf), &sz) == 0) {
+            for (uint32_t i = 0; i < sz; i++) kprint_char(fbuf[i]);
+            kprint_char('\n');
+        } else {
+            kprint_color("  no such file\n", COLOR_RED_ON_BLACK);
+        }
     } else {
         kprint_color("unknown command: ", COLOR_RED_ON_BLACK);
         kprint(cmd);

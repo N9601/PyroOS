@@ -66,7 +66,7 @@ $(BUILD)/kernel.bin: $(ASM_OBJ) $(C_OBJ) kernel/linker.ld
 #     If the kernel grows past ~30 KB, raise KERNEL_SECTORS and this size. ---
 $(BUILD)/os-image.bin: $(BUILD)/boot.bin $(BUILD)/kernel.bin
 	cat $(BUILD)/boot.bin $(BUILD)/kernel.bin > $@
-	truncate -s 65536 $@
+	truncate -s 1048576 $@
 	@echo "Built $@ (kernel: $$(stat -c%s $(BUILD)/kernel.bin) bytes)"
 
 run: all
