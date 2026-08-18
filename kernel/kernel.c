@@ -7,6 +7,7 @@
 #include "screen.h"
 #include "gdt.h"
 #include "idt.h"
+#include "syscall.h"
 #include "paging.h"
 #include "kheap.h"
 #include "timer.h"
@@ -21,6 +22,7 @@ void kmain(void)
 
     gdt_install();          /* kernel GDT with user segments + TSS */
     idt_install();          /* interrupt table + PIC remap */
+    syscall_install();      /* int 0x80 system-call gate */
     paging_install();       /* virtual memory (identity-map first 4 MB) */
     heap_install();         /* dynamic memory (kmalloc/kfree) */
     timer_install(50);      /* 50 Hz system timer */

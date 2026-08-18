@@ -15,6 +15,7 @@
 #include "fs.h"
 #include "string.h"
 #include "task.h"
+#include "syscall.h"
 
 #include <stdint.h>
 
@@ -62,6 +63,7 @@ static void cmd_help(void)
     kprint("  disk          check the boot disk\n");
     kprint("  tasks         cooperative multitasking demo\n");
     kprint("  spin          preemptive multitasking demo\n");
+    kprint("  syscall       invoke a system call (int 0x80)\n");
     kprint("  reboot        restart the machine\n");
 }
 
@@ -113,6 +115,13 @@ static void execute(const char *cmd)
     } else if (streq(cmd, "spin")) {
         kprint("  two non-yielding tasks, preempted by the timer (~2s):\n");
         preempt_demo();
+    } else if (streq(cmd, "syscall")) {
+        uint32_t ret;
+        const char *msg = "  hello from a system call (int 0x80)\n";
+        __asm__ volatile("int $0x80" : "=a"(ret) : "a"(SYS_WRITE), "b"(msg));
+        uint32_t up;
+        __asm__ volatile("int $0x80" : "=a"(up) : "a"(SYS_UPTIME) : "ebx");
+        kprint("  sys_uptime returned "); kprint_dec(up); kprint(" ticks\n");
     } else if (streq(cmd, "reboot")) {
         reboot();
     } else if (streq(cmd, "echo")) {

@@ -14,6 +14,7 @@
 [bits 32]
 [extern isr_handler]            ; C function, in isr.c
 [extern irq_handler]            ; C function, in isr.c
+[extern syscall_handler]        ; C function, in syscall.c
 
 ; --- macro: exception with NO CPU error code (we push a dummy 0) ---
 %macro ISR_NOERRCODE 1
@@ -140,6 +141,35 @@ irq_common_stub:
     mov gs, ax
     popa
     add esp, 8
+    iret
+
+; --- system call entry (int 0x80) ---
+; Same shape as the IRQ stub, but calls syscall_handler. The handler may write
+; a return value into the saved eax (via the registers_t pointer), which popa
+; then restores for the caller.
+global isr128
+isr128:
+    push dword 0                ; dummy error code
+    push dword 128              ; interrupt number
+    pusha
+    mov ax, ds
+    push eax                    ; save data segment
+    mov ax, 0x10                ; kernel data segment
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov eax, esp                ; eax -> registers_t
+    push eax
+    call syscall_handler
+    add esp, 4
+    pop eax                     ; restore data segment (temp in eax)
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    popa                        ; restores saved regs incl. eax (return value)
+    add esp, 8                  ; drop int_no and err_code
     iret
 
 ; --- load the IDT (called from idt.c as idt_flush(&idtp)) ---
