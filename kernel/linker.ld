@@ -20,7 +20,7 @@ ENTRY(_start)
 
 SECTIONS
 {
-    . = 0x1000;                 /* kernel is loaded and linked at 0x1000 */
+    . = 0x10000;                /* kernel is loaded and linked at 0x10000 (64 KB) */
 
     .text : {
         *(.text)                /* all code; entry stub comes first by link order */

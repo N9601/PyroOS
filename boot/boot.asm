@@ -11,8 +11,13 @@
 [org 0x7c00]
 [bits 16]
 
-KERNEL_OFFSET equ 0x1000    ; where we load the kernel in memory. The linker
-                            ; script builds the kernel to run at this address.
+KERNEL_OFFSET  equ 0x10000  ; where we load the kernel: 64 KB, safely ABOVE the
+                            ; boot sector (0x7C00) and real-mode stack (0x9000),
+                            ; so the disk load can't overwrite running code. The
+                            ; linker script builds the kernel to run here.
+KERNEL_SECTORS equ 60       ; how many 512-byte sectors of kernel to load
+                            ; (60 = 30 KB; raise with the image size in the
+                            ;  Makefile if the kernel outgrows it)
 
 start:
     mov [BOOT_DRIVE], dl     ; save BIOS boot drive for later use
@@ -28,11 +33,9 @@ start:
     mov bx, MSG_REAL_MODE
     call print_string       ; still using BIOS teletype -- we're in real mode
 
-    ; Load the kernel from disk into memory at KERNEL_OFFSET, while the BIOS
-    ; is still available. ES:BX = 0x0000:0x1000 is the destination.
-    mov bx, KERNEL_OFFSET
-    mov dh, 15              ; number of sectors to load (plenty for now)
-    mov dl, [BOOT_DRIVE]    ; read from the drive we booted from
+    ; Load the kernel from disk into memory at KERNEL_OFFSET, while the BIOS is
+    ; still available. Destination and sector count live in the disk address
+    ; packet (see disk.asm); the drive number comes from BOOT_DRIVE.
     call disk_load
 
     call switch_to_pm       ; leave real mode. This never returns: it ends in

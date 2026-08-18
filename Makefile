@@ -61,13 +61,12 @@ $(BUILD)/kernel.bin: $(ASM_OBJ) $(C_OBJ) kernel/linker.ld
 		$(ASM_OBJ) $(C_OBJ)
 	objcopy -O binary $(BUILD)/kernel.elf $@
 
-# --- final disk image: boot sector then kernel, padded so the boot sector's
-#     15-sector read never runs past the end of the image (16 sectors here).
-#     If the kernel ever grows past ~7.5 KB, raise both this size and the
-#     sector count in boot.asm. ---
+# --- final disk image: boot sector then kernel, padded to 64 KB so the boot
+#     loader's LBA read (KERNEL_SECTORS in boot.asm) always has data to read.
+#     If the kernel grows past ~30 KB, raise KERNEL_SECTORS and this size. ---
 $(BUILD)/os-image.bin: $(BUILD)/boot.bin $(BUILD)/kernel.bin
 	cat $(BUILD)/boot.bin $(BUILD)/kernel.bin > $@
-	truncate -s 8192 $@
+	truncate -s 65536 $@
 	@echo "Built $@ (kernel: $$(stat -c%s $(BUILD)/kernel.bin) bytes)"
 
 run: all
