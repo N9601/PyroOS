@@ -35,7 +35,9 @@ SECTIONS
     }
 
     .bss : {
+        bss_start = .;          /* entry stub zeroes the range [bss_start,bss_end) */
         *(.bss)
         *(COMMON)               /* zero-initialized data */
+        bss_end = .;
     }
 }

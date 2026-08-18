@@ -23,6 +23,14 @@ CFLAGS := -m32 -ffreestanding -fno-pie -fno-stack-protector -nostdlib -Wall -Wex
 # them triggers a rebuild.
 BOOT_SRCS := boot/boot.asm boot/gdt.asm boot/disk.asm boot/switch_pm.asm boot/print_pm.asm
 
+# Every C file in kernel/ becomes an object automatically.
+C_SOURCES := $(wildcard kernel/*.c)
+C_OBJ     := $(patsubst kernel/%.c, $(BUILD)/%.o, $(C_SOURCES))
+
+# Assembly objects that link with the C code. kernel_entry MUST come first in
+# the link so its _start is the very first byte of the kernel.
+ASM_OBJ := $(BUILD)/kernel_entry.o
+
 .PHONY: all run clean
 
 all: $(BUILD)/os-image.bin
@@ -37,15 +45,15 @@ $(BUILD)/kernel_entry.o: kernel/kernel_entry.asm
 	@mkdir -p $(BUILD)
 	nasm -f elf32 $< -o $@
 
-# --- C kernel: ELF object ---
-$(BUILD)/kernel.o: kernel/kernel.c
+# --- generic rule: compile any kernel/*.c into build/*.o ---
+$(BUILD)/%.o: kernel/%.c
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # --- link kernel: entry stub FIRST, base address 0x1000, then flatten ---
-$(BUILD)/kernel.bin: $(BUILD)/kernel_entry.o $(BUILD)/kernel.o kernel/linker.ld
+$(BUILD)/kernel.bin: $(ASM_OBJ) $(C_OBJ) kernel/linker.ld
 	ld -m elf_i386 -z noexecstack -T kernel/linker.ld -o $(BUILD)/kernel.elf \
-		$(BUILD)/kernel_entry.o $(BUILD)/kernel.o
+		$(ASM_OBJ) $(C_OBJ)
 	objcopy -O binary $(BUILD)/kernel.elf $@
 
 # --- final disk image: boot sector then kernel, padded so the boot sector's

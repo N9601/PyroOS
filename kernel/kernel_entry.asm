@@ -1,20 +1,25 @@
 ; ============================================================================
 ;  PyroOS  -  kernel entry stub
 ; ----------------------------------------------------------------------------
-;  The boot sector jumps to the very first byte where the kernel was loaded.
-;  A C compiler can lay out functions in any order, so we cannot assume kmain
-;  is first. This tiny stub solves that: the linker script places it at the
-;  front of the kernel, so it IS the first byte. All it does is call into C.
-;
-;  Assembled as an ELF object (nasm -f elf32) so the linker can combine it
-;  with the compiled C object.
+;  Placed first in the linked kernel, so it is the first instruction the boot
+;  sector jumps to. It zeroes the .bss section (uninitialized globals -- the
+;  C runtime would normally do this, but we are the OS) and then calls kmain.
 ; ============================================================================
 
 [bits 32]
-[extern kmain]          ; kmain is defined in kernel.c; the linker resolves it
+[extern kmain]
+[extern bss_start]              ; provided by the linker script
+[extern bss_end]
 
 global _start
 section .text
 _start:
-    call kmain          ; hand control to the C kernel
-    jmp $               ; if kmain ever returns, halt here forever
+    ; Zero the .bss range so global variables that start at 0 really are 0.
+    mov edi, bss_start
+    mov ecx, bss_end
+    sub ecx, edi                ; ecx = number of bytes in .bss
+    xor eax, eax
+    rep stosb                   ; store AL (0) ECX times starting at [edi]
+
+    call kmain                  ; hand control to the C kernel
+    jmp $                       ; if kmain returns, halt here forever

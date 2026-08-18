@@ -1,0 +1,18 @@
+/* ============================================================================
+ *  PyroOS  -  screen driver (VGA text mode)
+ * ==========================================================================*/
+#ifndef SCREEN_H
+#define SCREEN_H
+
+#include <stdint.h>
+
+#define COLOR_WHITE_ON_BLACK 0x0F
+#define COLOR_GREEN_ON_BLACK 0x0A
+#define COLOR_RED_ON_BLACK   0x0C
+
+void clear_screen(void);
+void kprint_char(char c);                       /* print one char at the cursor */
+void kprint(const char *s);                     /* print a string */
+void kprint_color(const char *s, uint8_t color);/* print a string in a color */
+
+#endif
