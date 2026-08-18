@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./assets/logo.svg" alt="PyroOS" width="150" />
+
 # PyroOS
 
 ![Milestones](https://img.shields.io/badge/Milestones-12-e07a25?style=flat-square)
