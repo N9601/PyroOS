@@ -7,6 +7,7 @@
  * ==========================================================================*/
 #include "screen.h"
 #include "idt.h"
+#include "paging.h"
 #include "timer.h"
 #include "keyboard.h"
 
@@ -16,6 +17,9 @@ void kmain(void)
     kprint_color("PyroOS kernel online.\n", COLOR_GREEN_ON_BLACK);
 
     idt_install();          /* build and load the interrupt table + remap PIC */
+    paging_install();       /* enable virtual memory (identity-map first 4 MB) */
+    kprint("Paging enabled: first 4 MB identity-mapped.\n");
+
     timer_install(50);      /* start the timer at 50 Hz (ticks in background) */
     keyboard_install();     /* register the keyboard IRQ handler */
 

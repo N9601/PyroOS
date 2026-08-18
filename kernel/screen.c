@@ -75,3 +75,27 @@ void kprint(const char *s)
     for (int i = 0; s[i] != '\0'; i++)
         kprint_char(s[i]);
 }
+
+void kprint_hex(uint32_t n)
+{
+    const char *digits = "0123456789abcdef";
+    kprint("0x");
+    for (int shift = 28; shift >= 0; shift -= 4)
+        kprint_char(digits[(n >> shift) & 0xF]);
+}
+
+void kprint_dec(uint32_t n)
+{
+    char buf[11];
+    int i = 10;
+    buf[i--] = '\0';
+    if (n == 0) {
+        kprint_char('0');
+        return;
+    }
+    while (n > 0 && i >= 0) {
+        buf[i--] = '0' + (n % 10);
+        n /= 10;
+    }
+    kprint(&buf[i + 1]);
+}

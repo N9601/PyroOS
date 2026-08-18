@@ -14,5 +14,7 @@ void clear_screen(void);
 void kprint_char(char c);                       /* print one char at the cursor */
 void kprint(const char *s);                     /* print a string */
 void kprint_color(const char *s, uint8_t color);/* print a string in a color */
+void kprint_hex(uint32_t n);                    /* print a number as 0xXXXXXXXX */
+void kprint_dec(uint32_t n);                    /* print a number in decimal */
 
 #endif
