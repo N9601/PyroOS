@@ -29,7 +29,7 @@ C_OBJ     := $(patsubst kernel/%.c, $(BUILD)/%.o, $(C_SOURCES))
 
 # Assembly objects that link with the C code. kernel_entry MUST come first in
 # the link so its _start is the very first byte of the kernel.
-ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUILD)/gdt_flush.o
+ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUILD)/gdt_flush.o $(BUILD)/ring3.o
 
 .PHONY: all run clean
 
@@ -57,6 +57,11 @@ $(BUILD)/switch.o: kernel/switch.asm
 
 # --- GDT/TSS loader: ELF object ---
 $(BUILD)/gdt_flush.o: kernel/gdt_flush.asm
+	@mkdir -p $(BUILD)
+	nasm -f elf32 $< -o $@
+
+# --- user-mode entry / context save: ELF object ---
+$(BUILD)/ring3.o: kernel/ring3.asm
 	@mkdir -p $(BUILD)
 	nasm -f elf32 $< -o $@
 

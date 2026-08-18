@@ -16,6 +16,7 @@
 #include "string.h"
 #include "task.h"
 #include "syscall.h"
+#include "usermode.h"
 
 #include <stdint.h>
 
@@ -64,6 +65,7 @@ static void cmd_help(void)
     kprint("  tasks         cooperative multitasking demo\n");
     kprint("  spin          preemptive multitasking demo\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
+    kprint("  user          run a program in ring 3 (user mode)\n");
     kprint("  reboot        restart the machine\n");
 }
 
@@ -122,6 +124,9 @@ static void execute(const char *cmd)
         uint32_t up;
         __asm__ volatile("int $0x80" : "=a"(up) : "a"(SYS_UPTIME) : "ebx");
         kprint("  sys_uptime returned "); kprint_dec(up); kprint(" ticks\n");
+    } else if (streq(cmd, "user")) {
+        kprint("  dropping to ring 3 (user mode)...\n");
+        run_user_program();
     } else if (streq(cmd, "reboot")) {
         reboot();
     } else if (streq(cmd, "echo")) {

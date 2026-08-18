@@ -21,6 +21,7 @@
 
 #define PAGE_PRESENT 0x1
 #define PAGE_RW      0x2
+#define PAGE_USER    0x4    /* accessible from ring 3 (needed for user mode) */
 
 /* Page tables must be 4 KB aligned. These live in .bss (already zeroed). */
 static uint32_t page_directory[1024] __attribute__((aligned(4096)));
@@ -28,13 +29,15 @@ static uint32_t first_page_table[1024] __attribute__((aligned(4096)));
 
 void paging_install(void)
 {
-    /* Identity-map the first 4 MB: page i covers physical address i*4KB. */
+    /* Identity-map the first 4 MB: page i covers physical address i*4KB. The
+       USER flag lets ring-3 code run here too (see the user-mode milestone;
+       real isolation would give user code its own separate pages). */
     for (int i = 0; i < 1024; i++)
-        first_page_table[i] = (i * 0x1000) | PAGE_PRESENT | PAGE_RW;
+        first_page_table[i] = (i * 0x1000) | PAGE_PRESENT | PAGE_RW | PAGE_USER;
 
     /* Directory entry 0 points at that table. All other directory entries stay
        zero (not present), so touching memory above 4 MB will page-fault. */
-    page_directory[0] = ((uint32_t)first_page_table) | PAGE_PRESENT | PAGE_RW;
+    page_directory[0] = ((uint32_t)first_page_table) | PAGE_PRESENT | PAGE_RW | PAGE_USER;
 
     /* Load the directory address into CR3. */
     __asm__ volatile("mov %0, %%cr3" :: "r"(page_directory));

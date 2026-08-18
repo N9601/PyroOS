@@ -13,11 +13,9 @@
 #include "isr.h"
 #include "screen.h"
 #include "timer.h"
+#include "usermode.h"
 
 extern void isr128(void);       /* the int 0x80 stub in interrupt.asm */
-
-/* Set by SYS_EXIT so the ring-3 launcher knows the program asked to quit. */
-volatile int syscall_exit_flag = 0;
 
 void syscall_handler(registers_t *r)
 {
@@ -30,8 +28,7 @@ void syscall_handler(registers_t *r)
         r->eax = timer_ticks();
         break;
     case SYS_EXIT:
-        syscall_exit_flag = 1;      /* the ring-3 launcher acts on this */
-        r->eax = 0;
+        user_exit();                /* unwind back to the kernel; never returns */
         break;
     default:
         r->eax = (uint32_t)-1;
