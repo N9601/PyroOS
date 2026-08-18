@@ -5,6 +5,7 @@
  *  device drivers, enable interrupts, then hand control to the shell.
  * ==========================================================================*/
 #include "screen.h"
+#include "gdt.h"
 #include "idt.h"
 #include "paging.h"
 #include "kheap.h"
@@ -18,6 +19,7 @@ void kmain(void)
     clear_screen();
     kprint_color("PyroOS kernel online.\n", COLOR_GREEN_ON_BLACK);
 
+    gdt_install();          /* kernel GDT with user segments + TSS */
     idt_install();          /* interrupt table + PIC remap */
     paging_install();       /* virtual memory (identity-map first 4 MB) */
     heap_install();         /* dynamic memory (kmalloc/kfree) */
