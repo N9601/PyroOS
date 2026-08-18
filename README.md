@@ -14,7 +14,7 @@ via a hand-written ATA driver, and a cooperative scheduler multitasks between
 several tasks with real context switching.
 
 Shell commands: `help`, `about`, `clear`, `echo`, `ls`, `write`, `cat`, `mem`,
-`ticks`, `disk`, `tasks`, `reboot`.
+`ticks`, `disk`, `tasks`, `spin`, `reboot`.
 
 Layout: `boot/` holds the assembly boot sector and its pieces; `kernel/` holds
 the C kernel and all subsystems (screen, interrupts, paging, heap, drivers,
@@ -50,3 +50,5 @@ make run    # boot it in QEMU
 6. Shell: an interactive command line. (done)
 7. Storage: ATA disk driver and the PyroFS filesystem. (done)
 8. Multitasking: a round-robin scheduler and context switching. (done)
+9. Preemptive scheduling: the timer forcibly switches tasks. (done)
+10. User mode: ring 3, a TSS, and system calls. (next)
