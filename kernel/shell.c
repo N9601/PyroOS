@@ -14,6 +14,7 @@
 #include "ata.h"
 #include "fs.h"
 #include "string.h"
+#include "task.h"
 
 #include <stdint.h>
 
@@ -59,6 +60,7 @@ static void cmd_help(void)
     kprint("  mem           test the heap allocator\n");
     kprint("  ticks         timer ticks since boot\n");
     kprint("  disk          check the boot disk\n");
+    kprint("  tasks         run the multitasking demo\n");
     kprint("  reboot        restart the machine\n");
 }
 
@@ -104,6 +106,9 @@ static void execute(const char *cmd)
         } else {
             kprint_color("  disk read failed\n", COLOR_RED_ON_BLACK);
         }
+    } else if (streq(cmd, "tasks")) {
+        kprint("  three tasks yield in turn (round-robin):\n");
+        tasking_demo();
     } else if (streq(cmd, "reboot")) {
         reboot();
     } else if (streq(cmd, "echo")) {

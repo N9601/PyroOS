@@ -29,7 +29,7 @@ C_OBJ     := $(patsubst kernel/%.c, $(BUILD)/%.o, $(C_SOURCES))
 
 # Assembly objects that link with the C code. kernel_entry MUST come first in
 # the link so its _start is the very first byte of the kernel.
-ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o
+ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o
 
 .PHONY: all run clean
 
@@ -47,6 +47,11 @@ $(BUILD)/kernel_entry.o: kernel/kernel_entry.asm
 
 # --- interrupt stubs: ELF object ---
 $(BUILD)/interrupt.o: kernel/interrupt.asm
+	@mkdir -p $(BUILD)
+	nasm -f elf32 $< -o $@
+
+# --- context switch: ELF object ---
+$(BUILD)/switch.o: kernel/switch.asm
 	@mkdir -p $(BUILD)
 	nasm -f elf32 $< -o $@
 
