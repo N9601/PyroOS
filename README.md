@@ -6,14 +6,15 @@ The goal: an OS small enough to understand end to end. Every interrupt vector, e
 
 ## Status
 
-Milestone 7 complete: PyroOS is a small but real operating system. It boots from
+Milestone 8 complete: PyroOS is a small but real operating system. It boots from
 a custom bootloader, runs a C kernel in 32-bit protected mode, has virtual memory
 (paging) and a heap, handles interrupts, and runs timer and keyboard drivers. An
-interactive shell accepts commands, and a filesystem (PyroFS) stores files on
-disk via a hand-written ATA driver.
+interactive shell accepts commands, a filesystem (PyroFS) stores files on disk
+via a hand-written ATA driver, and a cooperative scheduler multitasks between
+several tasks with real context switching.
 
 Shell commands: `help`, `about`, `clear`, `echo`, `ls`, `write`, `cat`, `mem`,
-`ticks`, `disk`, `reboot`.
+`ticks`, `disk`, `tasks`, `reboot`.
 
 Layout: `boot/` holds the assembly boot sector and its pieces; `kernel/` holds
 the C kernel and all subsystems (screen, interrupts, paging, heap, drivers,
@@ -48,4 +49,4 @@ make run    # boot it in QEMU
 5. Memory: paging (virtual memory) and a kernel heap. (done)
 6. Shell: an interactive command line. (done)
 7. Storage: ATA disk driver and the PyroFS filesystem. (done)
-8. Multitasking: a scheduler and context switching. (next)
+8. Multitasking: a round-robin scheduler and context switching. (done)
