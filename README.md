@@ -6,12 +6,15 @@ The goal: an OS small enough to understand end to end. Every interrupt vector, e
 
 ## Status
 
-Milestone 3 complete: the boot sector loads a kernel from disk, switches the CPU
-to 32-bit protected mode, and jumps into a kernel written in C. The C kernel
-prints to the screen by writing directly to VGA memory.
+Milestone 4 complete: PyroOS is interactive. On top of the boot sector,
+protected-mode switch, and C kernel, it now installs an interrupt descriptor
+table, remaps the PIC, and runs timer (IRQ0) and PS/2 keyboard (IRQ1) drivers.
+Typed characters echo to the screen through a VGA text driver with a scrolling
+cursor.
 
 Layout: `boot/` holds the assembly boot sector and its pieces; `kernel/` holds
-the C kernel, its entry stub, and the linker script.
+the C kernel, the screen and interrupt code, the keyboard and timer drivers, the
+entry stub, and the linker script.
 
 ## Toolchain
 
@@ -38,5 +41,5 @@ make run    # boot it in QEMU
 1. Boot sector: BIOS handoff, real mode, print via BIOS interrupts. (done)
 2. Protected mode: GDT, A20 line, far jump to 32-bit. (done)
 3. C kernel: linker script, handoff from assembly to C, VGA text driver. (done)
-4. Interrupts: IDT, PIC, keyboard and timer handlers. (next)
-5. Beyond: paging, memory management, a scheduler.
+4. Interrupts: IDT, PIC, keyboard and timer handlers. (done)
+5. Beyond: paging, memory management, a scheduler. (next)
