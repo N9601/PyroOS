@@ -15,7 +15,10 @@ context switching. Programs can run in ring 3 (user mode) and reach the kernel
 only through int 0x80 system calls.
 
 Shell commands: `help`, `about`, `clear`, `echo`, `ls`, `write`, `cat`, `mem`,
-`ticks`, `disk`, `tasks`, `spin`, `syscall`, `user`, `reboot`.
+`ticks`, `disk`, `tasks`, `spin`, `syscall`, `user`, `fault`, `reboot`.
+
+Run it: `make run` (or `make run-sdl` if the GTK window won't take keyboard
+input under WSLg).
 
 Layout: `boot/` holds the assembly boot sector and its pieces; `kernel/` holds
 the C kernel and all subsystems (screen, interrupts, paging, heap, drivers,
@@ -53,3 +56,4 @@ make run    # boot it in QEMU
 8. Multitasking: a round-robin scheduler and context switching. (done)
 9. Preemptive scheduling: the timer forcibly switches tasks. (done)
 10. User mode: ring 3, a TSS, and system calls. (done)
+11. Fault handling: exception reporting and page-fault recovery. (done)
