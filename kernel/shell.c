@@ -19,6 +19,7 @@
 #include "usermode.h"
 #include "isr.h"
 #include "context.h"
+#include "logo.h"
 
 #include <stdint.h>
 
@@ -57,6 +58,7 @@ static void cmd_help(void)
     kprint("  help          this list\n");
     kprint("  about         what PyroOS is\n");
     kprint("  clear         clear the screen\n");
+    kprint("  logo          show the PyroOS flame logo\n");
     kprint("  echo <text>   print text back\n");
     kprint("  ls            list files\n");
     kprint("  write <f> <t> write text t to file f\n");
@@ -93,6 +95,8 @@ static void execute(const char *cmd)
         kprint("bootloader, protected mode, C kernel, paging, heap, and this shell.\n");
     } else if (streq(cmd, "clear")) {
         clear_screen();
+    } else if (streq(cmd, "logo")) {
+        logo_splash(150);       /* show the flame for ~3s, then clear */
     } else if (streq(cmd, "mem")) {
         void *p = kmalloc(16);
         void *q = kmalloc(16);

@@ -13,6 +13,7 @@
 #include "timer.h"
 #include "keyboard.h"
 #include "fs.h"
+#include "logo.h"
 #include "shell.h"
 
 void kmain(void)
@@ -32,6 +33,8 @@ void kmain(void)
     kprint("Subsystems: interrupts, paging, heap, timer, keyboard, fs.\n");
 
     __asm__ volatile("sti");/* enable interrupts */
+
+    logo_splash(75);        /* fire logo for ~1.5s, then clear */
 
     shell_run();            /* never returns */
 }

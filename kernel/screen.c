@@ -84,6 +84,13 @@ void kprint_hex(uint32_t n)
         kprint_char(digits[(n >> shift) & 0xF]);
 }
 
+void screen_put(int row, int col, unsigned char c, uint8_t color)
+{
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS)
+        return;
+    put_cell(row * COLS + col, (char)c, color);
+}
+
 void kprint_dec(uint32_t n)
 {
     char buf[11];

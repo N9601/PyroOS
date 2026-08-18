@@ -16,5 +16,6 @@ void kprint(const char *s);                     /* print a string */
 void kprint_color(const char *s, uint8_t color);/* print a string in a color */
 void kprint_hex(uint32_t n);                    /* print a number as 0xXXXXXXXX */
 void kprint_dec(uint32_t n);                    /* print a number in decimal */
+void screen_put(int row, int col, unsigned char c, uint8_t color); /* one cell, no cursor move */
 
 #endif
