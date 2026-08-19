@@ -69,7 +69,8 @@ static void cmd_help(void)
     kprint("  tasks         cooperative multitasking demo\n");
     kprint("  spin          preemptive multitasking demo\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
-    kprint("  user          run a program in ring 3 (user mode)\n");
+    kprint("  user          run the built-in ring-3 demo\n");
+    kprint("  exec <f>      load a program from disk and run it in ring 3\n");
     kprint("  fault         trigger and recover from a page fault\n");
     kprint("  reboot        restart the machine\n");
 }
@@ -134,6 +135,18 @@ static void execute(const char *cmd)
     } else if (streq(cmd, "user")) {
         kprint("  dropping to ring 3 (user mode)...\n");
         run_user_program();
+    } else if (starts_with(cmd, "exec ")) {
+        const char *name = cmd + 5;
+        while (*name == ' ') name++;
+        uint32_t size = 0;
+        if (fs_read(name, (void *)USER_LOAD_ADDR, 64 * 1024, &size) == 0 && size > 0) {
+            kprint("  loaded "); kprint(name); kprint(" (");
+            kprint_dec(size); kprint(" bytes) at "); kprint_hex(USER_LOAD_ADDR);
+            kprint(", running in ring 3:\n");
+            run_user_at(USER_LOAD_ADDR);
+        } else {
+            kprint_color("  no such program\n", COLOR_RED_ON_BLACK);
+        }
     } else if (streq(cmd, "fault")) {
         kprint("  reading unmapped memory at 0x00800000 (above the 4 MB map)...\n");
         /* save_context is called directly here so its stack frame survives

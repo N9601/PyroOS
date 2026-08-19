@@ -30,6 +30,12 @@ void kmain(void)
     keyboard_install();     /* keyboard IRQ + input buffer */
     fs_init();              /* mount the filesystem (format the disk if new) */
 
+    /* Install the bundled user program into the filesystem so `exec prog`
+       (and `ls`) can find it. Compiled separately, embedded as a byte array. */
+    extern const unsigned char user_prog[];
+    extern unsigned int user_prog_len;
+    fs_write("prog", user_prog, user_prog_len);
+
     kprint("Subsystems: interrupts, paging, heap, timer, keyboard, fs.\n");
 
     __asm__ volatile("sti");/* enable interrupts */

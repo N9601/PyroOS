@@ -31,6 +31,10 @@ C_OBJ     := $(patsubst kernel/%.c, $(BUILD)/%.o, $(C_SOURCES))
 # the link so its _start is the very first byte of the kernel.
 ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUILD)/gdt_flush.o $(BUILD)/ring3.o
 
+# The standalone user program, compiled separately and embedded as a byte array
+# so the kernel can write it into the filesystem at boot.
+EMBED_OBJ := $(BUILD)/userprog.o
+
 .PHONY: all run clean
 
 all: $(BUILD)/os-image.bin
@@ -70,10 +74,27 @@ $(BUILD)/%.o: kernel/%.c
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# --- link kernel: entry stub FIRST, base address 0x1000, then flatten ---
-$(BUILD)/kernel.bin: $(ASM_OBJ) $(C_OBJ) kernel/linker.ld
+# --- standalone user program: compile, link at 0x80000, flatten ---
+$(BUILD)/prog.o: user/prog.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/prog.bin: $(BUILD)/prog.o user/prog.ld
+	ld -m elf_i386 -z noexecstack -T user/prog.ld -o $(BUILD)/prog.elf $(BUILD)/prog.o
+	objcopy -O binary $(BUILD)/prog.elf $@
+
+# --- embed the program as a C byte array (user_prog / user_prog_len) ---
+$(BUILD)/userprog.c: $(BUILD)/prog.bin
+	cd $(BUILD) && xxd -i prog.bin | \
+		sed 's/prog_bin/user_prog/g; s/^unsigned char/const unsigned char/' > userprog.c
+
+$(BUILD)/userprog.o: $(BUILD)/userprog.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# --- link kernel: entry stub FIRST, base address 0x10000, then flatten ---
+$(BUILD)/kernel.bin: $(ASM_OBJ) $(C_OBJ) $(EMBED_OBJ) kernel/linker.ld
 	ld -m elf_i386 -z noexecstack -T kernel/linker.ld -o $(BUILD)/kernel.elf \
-		$(ASM_OBJ) $(C_OBJ)
+		$(ASM_OBJ) $(C_OBJ) $(EMBED_OBJ)
 	objcopy -O binary $(BUILD)/kernel.elf $@
 
 # --- final disk image: boot sector then kernel, padded to 64 KB so the boot

@@ -33,16 +33,22 @@ static void user_program(void)
 /* Called from the SYS_EXIT syscall handler (running in ring 0). */
 void user_exit(void)
 {
-    restore_context(&kernel_ctx);   /* jumps back into run_user_program */
+    restore_context(&kernel_ctx);   /* jumps back into run_user_at */
+}
+
+/* Enter ring 3 at `entry`, run until SYS_EXIT, then return here. Works for both
+   the built-in demo function and a program loaded from disk. */
+void run_user_at(uint32_t entry)
+{
+    if (save_context(&kernel_ctx) == 0) {
+        enter_user_mode((void (*)(void))entry,
+                        (uint32_t)&user_stack[sizeof(user_stack)]);
+    }
+    /* SYS_EXIT unwound us back here. */
+    kprint("  back in the kernel (ring 0); program exited cleanly.\n");
 }
 
 void run_user_program(void)
 {
-    if (save_context(&kernel_ctx) == 0) {
-        /* First pass: launch the program in ring 3. */
-        enter_user_mode(user_program,
-                        (uint32_t)&user_stack[sizeof(user_stack)]);
-    }
-    /* Second pass: SYS_EXIT unwound us back here. */
-    kprint("  back in the kernel (ring 0); user program exited cleanly.\n");
+    run_user_at((uint32_t)user_program);
 }
