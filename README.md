@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-13-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-14-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -53,6 +53,7 @@ pyro> write hello world
 pyro> cat hello
 pyro> ls
 pyro> exec prog
+pyro> exec crash
 pyro> tasks
 pyro> spin
 pyro> user
@@ -108,7 +109,7 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 - Ring-3 user mode via a Task State Segment
 - `int 0x80` system calls: write, uptime, exit
 - Loads and runs separately-compiled programs from disk
-- Privilege separation enforced by the hardware
+- User/supervisor memory protection: a program cannot corrupt the kernel
 
 ### Interface
 - Interactive shell with 18 built-in commands
@@ -224,8 +225,9 @@ PyroOS/
 │   ├── shell.c          The interactive shell
 │   └── string.c         Freestanding memcpy, memset, strcmp, ...
 ├── user/
-│   ├── prog.c           A standalone program, compiled separately
-│   └── prog.ld          Links it to run at 0x80000
+│   ├── prog.c           A well-behaved standalone program
+│   ├── crash.c          A program that tries to corrupt the kernel (gets killed)
+│   └── prog.ld          Links programs to run at 0x80000
 └── Makefile
 ```
 
@@ -246,6 +248,7 @@ PyroOS/
 11. Fault handling: exception reporting and page-fault recovery. (done)
 12. A pixel-art flame logo (boot splash and `logo` command). (done)
 13. Program loader: run separately-compiled programs from the filesystem in ring 3. (done)
+14. Memory protection: user/supervisor pages; a bad program is killed, not the kernel. (done)
 
 Next: per-process address spaces (separate page tables per program), a VESA framebuffer for graphics, and a fuller ELF loader.
 
@@ -259,7 +262,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**13 milestones.** From a 512-byte boot sector to loading programs in ring-3 user mode.
+**14 milestones.** From a 512-byte boot sector to protected ring-3 programs.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>
