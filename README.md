@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-12-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-13-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -51,6 +51,8 @@ pyro> help
 pyro> logo
 pyro> write hello world
 pyro> cat hello
+pyro> ls
+pyro> exec prog
 pyro> tasks
 pyro> spin
 pyro> user
@@ -105,10 +107,11 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 ### Userland
 - Ring-3 user mode via a Task State Segment
 - `int 0x80` system calls: write, uptime, exit
+- Loads and runs separately-compiled programs from disk
 - Privilege separation enforced by the hardware
 
 ### Interface
-- Interactive shell with 17 built-in commands
+- Interactive shell with 18 built-in commands
 - VGA text driver with a cursor and scrolling
 - Pixel-art flame logo as a boot splash
 
@@ -126,12 +129,12 @@ The shell reads a line, parses it, and runs a built-in command.
 help          list commands              tasks     cooperative multitasking demo
 about         what PyroOS is             spin      preemptive multitasking demo
 clear         clear the screen           syscall   invoke a system call (int 0x80)
-logo          show the flame logo        user      run a program in ring 3
-echo <text>   print text back            fault     trigger and recover a page fault
-ls            list files                 disk      check the boot disk
-write <f> <t> write text to a file       ticks     timer ticks since boot
-cat <f>       print a file               mem       test the heap allocator
-reboot        restart the machine
+logo          show the flame logo        user      run the built-in ring-3 demo
+echo <text>   print text back            exec <f>  load and run a program (ring 3)
+ls            list files                 fault     trigger and recover a page fault
+write <f> <t> write text to a file       disk      check the boot disk
+cat <f>       print a file               ticks     timer ticks since boot
+mem           test the heap allocator    reboot    restart the machine
 ```
 
 ---
@@ -220,6 +223,9 @@ PyroOS/
 │   ├── logo.c           Pixel-art flame logo
 │   ├── shell.c          The interactive shell
 │   └── string.c         Freestanding memcpy, memset, strcmp, ...
+├── user/
+│   ├── prog.c           A standalone program, compiled separately
+│   └── prog.ld          Links it to run at 0x80000
 └── Makefile
 ```
 
@@ -239,8 +245,9 @@ PyroOS/
 10. User mode: ring 3, a TSS, and system calls. (done)
 11. Fault handling: exception reporting and page-fault recovery. (done)
 12. A pixel-art flame logo (boot splash and `logo` command). (done)
+13. Program loader: run separately-compiled programs from the filesystem in ring 3. (done)
 
-Next: an ELF loader to run separately-compiled programs from the filesystem, per-process address spaces, and a VESA framebuffer for graphics.
+Next: per-process address spaces (separate page tables per program), a VESA framebuffer for graphics, and a fuller ELF loader.
 
 ---
 
@@ -252,7 +259,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**12 milestones.** From a 512-byte boot sector to ring-3 user mode.
+**13 milestones.** From a 512-byte boot sector to loading programs in ring-3 user mode.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>
