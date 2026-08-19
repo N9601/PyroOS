@@ -119,6 +119,7 @@ static const char *exception_names[32] = {
    context instead of halting. The caller must save the context itself (with
    save_context) in a stack frame that survives until the fault, then arm. */
 ctx_t               fault_recovery_ctx;
+volatile int        g_user_faulted = 0;   /* set when a fault triggered recovery */
 static volatile int fault_armed = 0;
 
 void fault_arm(void)    { fault_armed = 1; }
@@ -147,6 +148,7 @@ void isr_handler(registers_t *r)
 
     if (fault_armed) {
         fault_armed = 0;
+        g_user_faulted = 1;
         restore_context(&fault_recovery_ctx);   /* recover: never returns here */
     }
 

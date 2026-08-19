@@ -23,17 +23,29 @@
 #define PAGE_RW      0x2
 #define PAGE_USER    0x4    /* accessible from ring 3 (needed for user mode) */
 
+/* The only range ring-3 code may touch: program load area + user stack. */
+#define USER_ZONE_START 0x00080000u
+#define USER_ZONE_END   0x00100000u
+
 /* Page tables must be 4 KB aligned. These live in .bss (already zeroed). */
 static uint32_t page_directory[1024] __attribute__((aligned(4096)));
 static uint32_t first_page_table[1024] __attribute__((aligned(4096)));
 
 void paging_install(void)
 {
-    /* Identity-map the first 4 MB: page i covers physical address i*4KB. The
-       USER flag lets ring-3 code run here too (see the user-mode milestone;
-       real isolation would give user code its own separate pages). */
-    for (int i = 0; i < 1024; i++)
-        first_page_table[i] = (i * 0x1000) | PAGE_PRESENT | PAGE_RW | PAGE_USER;
+    /* Identity-map the first 4 MB. Only the user zone (0x80000..0xFFFFF) gets
+       the USER flag; everything else (kernel code, data, heap) is supervisor-
+       only, so ring-3 code that touches it page-faults. A page is reachable
+       from ring 3 only when BOTH its table entry and the directory entry have
+       the USER flag, so we set USER on the directory entry and selectively on
+       the table entries. */
+    for (int i = 0; i < 1024; i++) {
+        uint32_t addr = (uint32_t)(i * 0x1000);
+        uint32_t flags = PAGE_PRESENT | PAGE_RW;
+        if (addr >= USER_ZONE_START && addr < USER_ZONE_END)
+            flags |= PAGE_USER;
+        first_page_table[i] = addr | flags;
+    }
 
     /* Directory entry 0 points at that table. All other directory entries stay
        zero (not present), so touching memory above 4 MB will page-fault. */

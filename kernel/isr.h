@@ -28,6 +28,7 @@ void register_interrupt_handler(uint8_t n, isr_t handler);/* register a C handle
    unwinds back to the save_context call (which then appears to return 1). The
    save_context call MUST be in a stack frame that lives until the fault. */
 extern ctx_t fault_recovery_ctx;
+extern volatile int g_user_faulted;   /* set to 1 when a fault triggered recovery */
 void fault_arm(void);
 void fault_disarm(void);
 
