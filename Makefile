@@ -31,9 +31,9 @@ C_OBJ     := $(patsubst kernel/%.c, $(BUILD)/%.o, $(C_SOURCES))
 # the link so its _start is the very first byte of the kernel.
 ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUILD)/gdt_flush.o $(BUILD)/ring3.o
 
-# The standalone user program, compiled separately and embedded as a byte array
-# so the kernel can write it into the filesystem at boot.
-EMBED_OBJ := $(BUILD)/userprog.o
+# Standalone user programs, compiled separately and embedded as byte arrays so
+# the kernel can write them into the filesystem at boot.
+EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o
 
 .PHONY: all run clean
 
@@ -89,6 +89,22 @@ $(BUILD)/userprog.c: $(BUILD)/prog.bin
 		sed 's/prog_bin/user_prog/g; s/^unsigned char/const unsigned char/' > userprog.c
 
 $(BUILD)/userprog.o: $(BUILD)/userprog.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# --- a second program (the misbehaving one), same pipeline ---
+$(BUILD)/crash.o: user/crash.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/crash.bin: $(BUILD)/crash.o user/prog.ld
+	ld -m elf_i386 -z noexecstack -T user/prog.ld -o $(BUILD)/crash.elf $(BUILD)/crash.o
+	objcopy -O binary $(BUILD)/crash.elf $@
+
+$(BUILD)/crashprog.c: $(BUILD)/crash.bin
+	cd $(BUILD) && xxd -i crash.bin | \
+		sed 's/crash_bin/crash_prog/g; s/^unsigned char/const unsigned char/' > crashprog.c
+
+$(BUILD)/crashprog.o: $(BUILD)/crashprog.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # --- link kernel: entry stub FIRST, base address 0x10000, then flatten ---

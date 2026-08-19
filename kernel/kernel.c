@@ -34,7 +34,10 @@ void kmain(void)
        (and `ls`) can find it. Compiled separately, embedded as a byte array. */
     extern const unsigned char user_prog[];
     extern unsigned int user_prog_len;
+    extern const unsigned char crash_prog[];
+    extern unsigned int crash_prog_len;
     fs_write("prog", user_prog, user_prog_len);
+    fs_write("crash", crash_prog, crash_prog_len);
 
     kprint("Subsystems: interrupts, paging, heap, timer, keyboard, fs.\n");
 
