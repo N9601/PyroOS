@@ -33,7 +33,7 @@ ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUIL
 
 # Standalone user programs, compiled separately and embedded as byte arrays so
 # the kernel can write them into the filesystem at boot.
-EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o
+EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o $(BUILD)/askprog.o
 
 .PHONY: all run clean
 
@@ -105,6 +105,22 @@ $(BUILD)/crashprog.c: $(BUILD)/crash.bin
 		sed 's/crash_bin/crash_prog/g; s/^unsigned char/const unsigned char/' > crashprog.c
 
 $(BUILD)/crashprog.o: $(BUILD)/crashprog.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# --- a third program (the interactive one), same pipeline ---
+$(BUILD)/ask.o: user/ask.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/ask.bin: $(BUILD)/ask.o user/prog.ld
+	ld -m elf_i386 -z noexecstack -T user/prog.ld -o $(BUILD)/ask.elf $(BUILD)/ask.o
+	objcopy -O binary $(BUILD)/ask.elf $@
+
+$(BUILD)/askprog.c: $(BUILD)/ask.bin
+	cd $(BUILD) && xxd -i ask.bin | \
+		sed 's/ask_bin/ask_prog/g; s/^unsigned char/const unsigned char/' > askprog.c
+
+$(BUILD)/askprog.o: $(BUILD)/askprog.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # --- link kernel: entry stub FIRST, base address 0x10000, then flatten ---

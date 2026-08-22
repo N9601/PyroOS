@@ -13,6 +13,7 @@
 #include "isr.h"
 #include "screen.h"
 #include "timer.h"
+#include "keyboard.h"
 #include "usermode.h"
 
 extern void isr128(void);       /* the int 0x80 stub in interrupt.asm */
@@ -30,6 +31,24 @@ void syscall_handler(registers_t *r)
     case SYS_EXIT:
         user_exit();                /* unwind back to the kernel; never returns */
         break;
+    case SYS_READ: {
+        /* Block until a key arrives. Enable interrupts so the keyboard IRQ can
+           fill the buffer and the timer can wake us from hlt. */
+        int c;
+        __asm__ volatile("sti");
+        while ((c = keyboard_getchar()) < 0)
+            __asm__ volatile("hlt");
+        r->eax = (uint32_t)c;
+        break;
+    }
+    case SYS_SLEEP: {
+        uint32_t target = timer_ticks() + r->ebx;
+        __asm__ volatile("sti");
+        while (timer_ticks() < target)
+            __asm__ volatile("hlt");
+        r->eax = 0;
+        break;
+    }
     default:
         r->eax = (uint32_t)-1;
         break;
