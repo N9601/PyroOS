@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-15-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-16-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -52,8 +52,9 @@ pyro> logo
 pyro> write hello world
 pyro> cat hello
 pyro> ls
-pyro> exec prog
 pyro> exec ask
+pyro> exec calc
+pyro> exec guess
 pyro> exec crash
 pyro> tasks
 pyro> spin
@@ -108,9 +109,9 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 
 ### Userland
 - Ring-3 user mode via a Task State Segment
-- `int 0x80` system calls: write, read, uptime, sleep, exit
+- `int 0x80` system calls: write, read, uptime, sleep, rand, exit
 - Loads and runs separately-compiled programs from disk
-- Interactive programs: read keyboard input from ring 3
+- Real interactive apps: a calculator and a number-guessing game
 - User/supervisor memory protection: a program cannot corrupt the kernel
 
 ### Interface
@@ -230,6 +231,8 @@ PyroOS/
 │   ├── prog.c           A well-behaved standalone program
 │   ├── crash.c          A program that tries to corrupt the kernel (gets killed)
 │   ├── ask.c            An interactive program (reads your name, greets you)
+│   ├── calc.c           A calculator
+│   ├── guess.c          A number-guessing game
 │   └── prog.ld          Links programs to run at 0x80000
 └── Makefile
 ```
@@ -253,6 +256,7 @@ PyroOS/
 13. Program loader: run separately-compiled programs from the filesystem in ring 3. (done)
 14. Memory protection: user/supervisor pages; a bad program is killed, not the kernel. (done)
 15. Interactive userland: blocking input syscalls; a ring-3 program reads and responds. (done)
+16. Apps: a calculator and a guessing game, plus keyboard Shift support. (done)
 
 Next: per-process address spaces (separate page tables per program), a VESA framebuffer for graphics, and a fuller ELF loader.
 
@@ -266,7 +270,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**15 milestones.** From a 512-byte boot sector to interactive, protected ring-3 programs.
+**16 milestones.** From a 512-byte boot sector to running real apps in protected ring-3.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>
