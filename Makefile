@@ -33,7 +33,8 @@ ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUIL
 
 # Standalone user programs, compiled separately and embedded as byte arrays so
 # the kernel can write them into the filesystem at boot.
-EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o $(BUILD)/askprog.o
+EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o $(BUILD)/askprog.o \
+             $(BUILD)/calcprog.o $(BUILD)/guessprog.o
 
 .PHONY: all run clean
 
@@ -121,6 +122,31 @@ $(BUILD)/askprog.c: $(BUILD)/ask.bin
 		sed 's/ask_bin/ask_prog/g; s/^unsigned char/const unsigned char/' > askprog.c
 
 $(BUILD)/askprog.o: $(BUILD)/askprog.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# --- calculator and guessing game, same pipeline ---
+$(BUILD)/calc.o: user/calc.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD)/calc.bin: $(BUILD)/calc.o user/prog.ld
+	ld -m elf_i386 -z noexecstack -T user/prog.ld -o $(BUILD)/calc.elf $(BUILD)/calc.o
+	objcopy -O binary $(BUILD)/calc.elf $@
+$(BUILD)/calcprog.c: $(BUILD)/calc.bin
+	cd $(BUILD) && xxd -i calc.bin | \
+		sed 's/calc_bin/calc_prog/g; s/^unsigned char/const unsigned char/' > calcprog.c
+$(BUILD)/calcprog.o: $(BUILD)/calcprog.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/guess.o: user/guess.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD)/guess.bin: $(BUILD)/guess.o user/prog.ld
+	ld -m elf_i386 -z noexecstack -T user/prog.ld -o $(BUILD)/guess.elf $(BUILD)/guess.o
+	objcopy -O binary $(BUILD)/guess.elf $@
+$(BUILD)/guessprog.c: $(BUILD)/guess.bin
+	cd $(BUILD) && xxd -i guess.bin | \
+		sed 's/guess_bin/guess_prog/g; s/^unsigned char/const unsigned char/' > guessprog.c
+$(BUILD)/guessprog.o: $(BUILD)/guessprog.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # --- link kernel: entry stub FIRST, base address 0x10000, then flatten ---

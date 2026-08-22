@@ -49,6 +49,15 @@ void syscall_handler(registers_t *r)
         r->eax = 0;
         break;
     }
+    case SYS_RAND: {
+        /* A small linear congruential generator, seeded from the timer. */
+        static uint32_t s = 0;
+        if (s == 0)
+            s = timer_ticks() * 2654435761u + 1u;
+        s = s * 1103515245u + 12345u;
+        r->eax = (s >> 16) & 0x7FFF;
+        break;
+    }
     default:
         r->eax = (uint32_t)-1;
         break;

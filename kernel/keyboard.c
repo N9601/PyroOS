@@ -37,19 +37,50 @@ static const char scancode_ascii[128] = {
     ' ',
 };
 
+/* The same keys with Shift held: symbols and capital letters. */
+static const char scancode_ascii_shift[128] = {
+    0,   27,  '!', '@', '#', '$', '%', '^', '&', '*',
+    '(', ')', '_', '+', '\b',
+    '\t','Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O',
+    'P', '{', '}', '\n',
+    0,
+    'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':',
+    '"', '~',
+    0,
+    '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>',
+    '?',
+    0,
+    '*',
+    0,
+    ' ',
+};
+
+#define LSHIFT 0x2A
+#define RSHIFT 0x36
+
 static volatile char     buffer[BUF_SIZE];
 static volatile uint32_t head = 0;   /* written only by the IRQ (producer) */
 static volatile uint32_t tail = 0;   /* written only by the consumer */
+static volatile int      shift = 0;  /* is a Shift key currently held */
 
 static void keyboard_callback(registers_t *r)
 {
     (void)r;
     uint8_t scancode = inb(KEYBOARD_DATA_PORT);
 
-    if (scancode & 0x80)
-        return;                                 /* key release: ignore */
+    if (scancode & 0x80) {                      /* key release */
+        uint8_t code = scancode & 0x7F;
+        if (code == LSHIFT || code == RSHIFT)
+            shift = 0;
+        return;
+    }
 
-    char c = scancode_ascii[scancode & 0x7F];
+    if (scancode == LSHIFT || scancode == RSHIFT) {
+        shift = 1;                              /* Shift pressed */
+        return;
+    }
+
+    char c = shift ? scancode_ascii_shift[scancode] : scancode_ascii[scancode];
     if (!c)
         return;
 

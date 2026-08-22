@@ -38,9 +38,15 @@ void kmain(void)
     extern unsigned int crash_prog_len;
     extern const unsigned char ask_prog[];
     extern unsigned int ask_prog_len;
+    extern const unsigned char calc_prog[];
+    extern unsigned int calc_prog_len;
+    extern const unsigned char guess_prog[];
+    extern unsigned int guess_prog_len;
     fs_write("prog", user_prog, user_prog_len);
     fs_write("crash", crash_prog, crash_prog_len);
     fs_write("ask", ask_prog, ask_prog_len);
+    fs_write("calc", calc_prog, calc_prog_len);
+    fs_write("guess", guess_prog, guess_prog_len);
 
     kprint("Subsystems: interrupts, paging, heap, timer, keyboard, fs.\n");
 
