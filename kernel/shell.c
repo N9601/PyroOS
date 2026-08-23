@@ -28,6 +28,58 @@
 static char     line[LINE_MAX];
 static uint32_t line_len = 0;
 
+/* Command history: up/down arrows recall previous commands. */
+#define HIST_MAX 16
+static char history[HIST_MAX][LINE_MAX];
+static int  hist_count  = 0;   /* how many commands are stored */
+static int  hist_browse = 0;   /* current position while browsing */
+
+static void copy_line(char *dst, const char *src)
+{
+    int i = 0;
+    for (; src[i] && i < LINE_MAX - 1; i++)
+        dst[i] = src[i];
+    dst[i] = '\0';
+}
+
+static void history_add(const char *s)
+{
+    if (s[0] != '\0') {
+        if (hist_count < HIST_MAX) {
+            copy_line(history[hist_count++], s);
+        } else {
+            for (int k = 0; k < HIST_MAX - 1; k++)
+                copy_line(history[k], history[k + 1]);
+            copy_line(history[HIST_MAX - 1], s);
+        }
+    }
+    hist_browse = hist_count;   /* reset browsing to the fresh line */
+}
+
+/* Erase whatever is typed and replace it with s, on screen and in the buffer. */
+static void replace_line(const char *s)
+{
+    while (line_len > 0) { kprint_char('\b'); line_len--; }
+    int i = 0;
+    for (; s[i] && i < LINE_MAX - 1; i++) { line[i] = s[i]; kprint_char(s[i]); }
+    line_len = (uint32_t)i;
+    line[line_len] = '\0';
+}
+
+static void history_prev(void)
+{
+    if (hist_count > 0 && hist_browse > 0)
+        replace_line(history[--hist_browse]);
+}
+
+static void history_next(void)
+{
+    if (hist_browse < hist_count) {
+        hist_browse++;
+        replace_line(hist_browse == hist_count ? "" : history[hist_browse]);
+    }
+}
+
 /* --- tiny string helpers (no libc) --- */
 static int streq(const char *a, const char *b)
 {
@@ -205,9 +257,14 @@ static void execute(const char *cmd)
 
 static void handle_char(char c)
 {
+    if (c == KEY_UP)   { history_prev(); return; }
+    if (c == KEY_DOWN) { history_next(); return; }
+    if (c == KEY_LEFT || c == KEY_RIGHT) return;   /* not handled yet */
+
     if (c == '\n') {
         kprint_char('\n');
         line[line_len] = '\0';
+        history_add(line);
         execute(line);
         line_len = 0;
         prompt();
