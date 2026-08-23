@@ -15,6 +15,15 @@
 #include "timer.h"
 #include "keyboard.h"
 #include "usermode.h"
+#include "fs.h"
+
+/* A pointer passed from ring 3 must lie inside the user zone (0x80000 to
+   0xFFFFF). This stops a program from tricking the kernel into reading or
+   writing kernel memory through a syscall. */
+static int in_user_zone(uint32_t p, uint32_t len)
+{
+    return p >= 0x00080000u && (uint64_t)p + len <= 0x00100000u;
+}
 
 extern void isr128(void);       /* the int 0x80 stub in interrupt.asm */
 
@@ -56,6 +65,26 @@ void syscall_handler(registers_t *r)
             s = timer_ticks() * 2654435761u + 1u;
         s = s * 1103515245u + 12345u;
         r->eax = (s >> 16) & 0x7FFF;
+        break;
+    }
+    case SYS_FWRITE: {
+        /* ebx=name, ecx=data, edx=length. Validate the user pointers first. */
+        if (in_user_zone(r->ebx, 1) && in_user_zone(r->ecx, r->edx))
+            r->eax = (uint32_t)fs_write((const char *)r->ebx, (const void *)r->ecx, r->edx);
+        else
+            r->eax = (uint32_t)-1;
+        break;
+    }
+    case SYS_FREAD: {
+        /* ebx=name, ecx=buffer, edx=max. The kernel writes into the buffer, so
+           it must be inside the user zone. Returns bytes read, or -1. */
+        if (in_user_zone(r->ebx, 1) && in_user_zone(r->ecx, r->edx)) {
+            uint32_t got = 0;
+            int rc = fs_read((const char *)r->ebx, (void *)r->ecx, r->edx, &got);
+            r->eax = (rc == 0) ? got : (uint32_t)-1;
+        } else {
+            r->eax = (uint32_t)-1;
+        }
         break;
     }
     default:

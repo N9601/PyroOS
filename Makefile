@@ -34,7 +34,7 @@ ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUIL
 # Standalone user programs, compiled separately and embedded as byte arrays so
 # the kernel can write them into the filesystem at boot.
 EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o $(BUILD)/askprog.o \
-             $(BUILD)/calcprog.o $(BUILD)/guessprog.o
+             $(BUILD)/calcprog.o $(BUILD)/guessprog.o $(BUILD)/noteprog.o
 
 .PHONY: all run clean
 
@@ -147,6 +147,18 @@ $(BUILD)/guessprog.c: $(BUILD)/guess.bin
 	cd $(BUILD) && xxd -i guess.bin | \
 		sed 's/guess_bin/guess_prog/g; s/^unsigned char/const unsigned char/' > guessprog.c
 $(BUILD)/guessprog.o: $(BUILD)/guessprog.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/note.o: user/note.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD)/note.bin: $(BUILD)/note.o user/prog.ld
+	ld -m elf_i386 -z noexecstack -T user/prog.ld -o $(BUILD)/note.elf $(BUILD)/note.o
+	objcopy -O binary $(BUILD)/note.elf $@
+$(BUILD)/noteprog.c: $(BUILD)/note.bin
+	cd $(BUILD) && xxd -i note.bin | \
+		sed 's/note_bin/note_prog/g; s/^unsigned char/const unsigned char/' > noteprog.c
+$(BUILD)/noteprog.o: $(BUILD)/noteprog.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # --- link kernel: entry stub FIRST, base address 0x10000, then flatten ---
