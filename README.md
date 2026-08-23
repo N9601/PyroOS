@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-17-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-18-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -115,7 +115,8 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 - User/supervisor memory protection, with syscall pointer validation
 
 ### Interface
-- Interactive shell with 18 built-in commands
+- Interactive shell with command history (up and down arrows)
+- Keyboard with Shift and arrow-key support
 - VGA text driver with a cursor and scrolling
 - Pixel-art flame logo as a boot splash
 
@@ -259,6 +260,7 @@ PyroOS/
 15. Interactive userland: blocking input syscalls; a ring-3 program reads and responds. (done)
 16. Apps: a calculator and a guessing game, plus keyboard Shift support. (done)
 17. File syscalls: a ring-3 note editor saves and reloads files from PyroFS. (done)
+18. Shell command history and arrow-key support in the keyboard driver. (done)
 
 Next: per-process address spaces (separate page tables per program), a VESA framebuffer for graphics, and a fuller ELF loader.
 
@@ -272,7 +274,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**17 milestones.** From a 512-byte boot sector to ring-3 apps that read input and save files.
+**18 milestones.** From a 512-byte boot sector to ring-3 apps, saved files, and a shell with history.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>
