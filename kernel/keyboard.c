@@ -62,16 +62,44 @@ static volatile char     buffer[BUF_SIZE];
 static volatile uint32_t head = 0;   /* written only by the IRQ (producer) */
 static volatile uint32_t tail = 0;   /* written only by the consumer */
 static volatile int      shift = 0;  /* is a Shift key currently held */
+static volatile int      extended = 0;  /* saw a 0xE0 prefix (arrow keys etc.) */
+
+static void enqueue(char c)
+{
+    uint32_t next = (head + 1) % BUF_SIZE;
+    if (next != tail) {                         /* drop if the buffer is full */
+        buffer[head] = c;
+        head = next;
+    }
+}
 
 static void keyboard_callback(registers_t *r)
 {
     (void)r;
     uint8_t scancode = inb(KEYBOARD_DATA_PORT);
 
+    if (scancode == 0xE0) {                      /* prefix for extended keys */
+        extended = 1;
+        return;
+    }
+
     if (scancode & 0x80) {                      /* key release */
         uint8_t code = scancode & 0x7F;
         if (code == LSHIFT || code == RSHIFT)
             shift = 0;
+        extended = 0;
+        return;
+    }
+
+    if (extended) {                             /* extended press: arrow keys */
+        extended = 0;
+        switch (scancode) {
+        case 0x48: enqueue(KEY_UP);    break;
+        case 0x50: enqueue(KEY_DOWN);  break;
+        case 0x4B: enqueue(KEY_LEFT);  break;
+        case 0x4D: enqueue(KEY_RIGHT); break;
+        default: break;
+        }
         return;
     }
 
@@ -81,14 +109,8 @@ static void keyboard_callback(registers_t *r)
     }
 
     char c = shift ? scancode_ascii_shift[scancode] : scancode_ascii[scancode];
-    if (!c)
-        return;
-
-    uint32_t next = (head + 1) % BUF_SIZE;
-    if (next != tail) {                         /* drop if the buffer is full */
-        buffer[head] = c;
-        head = next;
-    }
+    if (c)
+        enqueue(c);
 }
 
 int keyboard_getchar(void)
