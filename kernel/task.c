@@ -14,6 +14,7 @@
 #include "task.h"
 #include "screen.h"
 #include "timer.h"
+#include "sync.h"
 
 #include <stdint.h>
 
@@ -182,4 +183,70 @@ void preempt_demo(void)
     kprint("  task A counted to "); kprint_dec(work_a); kprint_char('\n');
     kprint("  task B counted to "); kprint_dec(work_b); kprint_char('\n');
     kprint("  neither task ever yielded: the timer preempted them.\n");
+}
+
+/* ============================================================================
+ *  Milestone 19: kernel threads and a race-condition demo
+ * ----------------------------------------------------------------------------
+ *  Three threads each add 8 to a shared counter. Each increment is a read,
+ *  then a yield (to force interleaving), then a write. Without a lock the
+ *  writes stomp on each other and updates are lost. With a mutex held across
+ *  the whole read-yield-write, only one thread is in the critical section at a
+ *  time and the total comes out exactly right.
+ * ==========================================================================*/
+#define THREAD_ITERS 8
+
+static volatile int shared_counter = 0;
+static mutex_t      counter_mutex;
+
+static void racer(void)
+{
+    for (int i = 0; i < THREAD_ITERS; i++) {
+        int t = shared_counter;
+        task_yield();               /* context switch in the middle of the update */
+        shared_counter = t + 1;
+    }
+    task_exit();
+}
+
+static void safe_worker(void)
+{
+    for (int i = 0; i < THREAD_ITERS; i++) {
+        mutex_lock(&counter_mutex);
+        int t = shared_counter;
+        task_yield();               /* still safe: we hold the mutex */
+        shared_counter = t + 1;
+        mutex_unlock(&counter_mutex);
+    }
+    task_exit();
+}
+
+static void spawn_three(void (*worker)(void))
+{
+    num_tasks = 0;
+    tasks[0].active = 0;            /* task 0 is the scheduler */
+    tasks[0].esp = 0;
+    num_tasks = 1;
+    current = 0;
+    task_create(worker);
+    task_create(worker);
+    task_create(worker);
+    task_yield();                   /* run cooperatively until all three exit */
+}
+
+void threads_demo(void)
+{
+    shared_counter = 0;
+    kprint("  3 threads each add 8 to a shared counter (expected 24).\n");
+    kprint("  without a lock: ");
+    spawn_three(racer);
+    kprint_dec(shared_counter);
+    kprint_color("  <- lost updates, a race condition.\n", COLOR_RED_ON_BLACK);
+
+    shared_counter = 0;
+    mutex_init(&counter_mutex);
+    kprint("  with a mutex:   ");
+    spawn_three(safe_worker);
+    kprint_dec(shared_counter);
+    kprint_color("  <- correct, mutual exclusion holds.\n", COLOR_GREEN_ON_BLACK);
 }
