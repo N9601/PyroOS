@@ -52,7 +52,7 @@ static int task_create(void (*entry)(void))
     return id;
 }
 
-static void task_yield(void)
+void task_yield(void)
 {
     int prev = current;
 
