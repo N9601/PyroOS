@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-18-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-19-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -98,9 +98,9 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 <td width="50%" valign="top">
 
 ### Concurrency
-- Cooperative round-robin scheduler
-- Preemptive scheduling driven by the timer (IRQ0)
-- Context switching hand-written in assembly
+- Cooperative and preemptive scheduling, context switching in assembly
+- Kernel threads with a race-condition demo
+- Synchronization primitives: spinlock, mutex, counting semaphore
 
 ### Storage
 - ATA (IDE) PIO disk driver, 28-bit LBA
@@ -220,8 +220,9 @@ PyroOS/
 │   ├── kheap.c          Kernel heap (kmalloc / kfree)
 │   ├── ata.c            ATA PIO disk driver
 │   ├── fs.c             PyroFS filesystem
-│   ├── task.c           Scheduler (cooperative and preemptive)
+│   ├── task.c           Scheduler + kernel threads (cooperative and preemptive)
 │   ├── switch.asm        Context switch
+│   ├── sync.c           Spinlock, mutex, and semaphore
 │   ├── gdt.c            Kernel GDT with user segments and a TSS
 │   ├── syscall.c        int 0x80 system-call dispatch
 │   ├── usermode.c       Ring-3 launcher (with ring3.asm)
@@ -261,8 +262,11 @@ PyroOS/
 16. Apps: a calculator and a guessing game, plus keyboard Shift support. (done)
 17. File syscalls: a ring-3 note editor saves and reloads files from PyroFS. (done)
 18. Shell command history and arrow-key support in the keyboard driver. (done)
+19. Kernel threads and synchronization primitives (spinlock, mutex, semaphore). (done)
 
-Next: per-process address spaces (separate page tables per program), a VESA framebuffer for graphics, and a fuller ELF loader.
+The larger subsystems planned next (per-process virtual memory, a POSIX process
+model, a VFS with FAT32/ext2, PCI and device drivers, a TCP/IP stack, a graphical
+subsystem, SMP, and a 64-bit port) are described in [ROADMAP.md](./ROADMAP.md).
 
 ---
 
@@ -274,7 +278,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**18 milestones.** From a 512-byte boot sector to ring-3 apps, saved files, and a shell with history.
+**19 milestones.** From a 512-byte boot sector to threads, mutexes, and ring-3 apps.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>
