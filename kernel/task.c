@@ -57,10 +57,10 @@ void task_yield(void)
 {
     int prev = current;
 
-    /* Look for the next active worker (indices 1..num_tasks-1). Task 0 is the
-       scheduler and is skipped here; we only fall back to it when no worker
-       is left to run. */
-    for (int off = 1; off <= num_tasks; off++) {
+    /* Look for a DIFFERENT active worker (off < num_tasks so cand is never the
+       current task: switching to self would reload a stale stack pointer).
+       Task 0 is the scheduler and is skipped in the rotation. */
+    for (int off = 1; off < num_tasks; off++) {
         int cand = (prev + off) % num_tasks;
         if (cand == 0)
             continue;
@@ -71,8 +71,10 @@ void task_yield(void)
         }
     }
 
-    /* No workers remain: hand control back to the scheduler task (0). */
-    if (prev != 0) {
+    /* No other worker is runnable. If the current worker is still active it is
+       the only one left, so just keep running it. Otherwise it has exited, so
+       hand control back to the scheduler task (0). */
+    if (prev != 0 && !tasks[prev].active) {
         current = 0;
         context_switch(&tasks[prev].esp, tasks[0].esp);
     }

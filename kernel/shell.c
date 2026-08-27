@@ -120,6 +120,7 @@ static void cmd_help(void)
     kprint("  disk          check the boot disk\n");
     kprint("  tasks         cooperative multitasking demo\n");
     kprint("  spin          preemptive multitasking demo\n");
+    kprint("  threads       mutex vs race-condition demo\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
     kprint("  user          run the built-in ring-3 demo\n");
     kprint("  exec <f>      load a program from disk and run it in ring 3\n");
@@ -177,6 +178,9 @@ static void execute(const char *cmd)
     } else if (streq(cmd, "spin")) {
         kprint("  two non-yielding tasks, preempted by the timer (~2s):\n");
         preempt_demo();
+    } else if (streq(cmd, "threads")) {
+        kprint("  synchronization: a race condition and its fix with a mutex.\n");
+        threads_demo();
     } else if (streq(cmd, "syscall")) {
         uint32_t ret;
         const char *msg = "  hello from a system call (int 0x80)\n";
