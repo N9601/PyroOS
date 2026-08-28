@@ -6,6 +6,7 @@
 #include "ports.h"
 #include "screen.h"
 #include "context.h"
+#include "demand.h"
 
 /* The 48 stubs from interrupt.asm. */
 extern void isr0(void);  extern void isr1(void);  extern void isr2(void);  extern void isr3(void);
@@ -129,6 +130,17 @@ void fault_disarm(void) { fault_armed = 0; }
    recovery is armed, unwinds back to the caller, otherwise halts. */
 void isr_handler(registers_t *r)
 {
+    /* A page fault is not always an error. If the address lies in a region
+       promised to a process but never backed with a frame, this is demand
+       paging doing its job: allocate the frame now and resume the faulting
+       instruction as if nothing had happened. */
+    if (r->int_no == 14) {
+        uint32_t fault_addr;
+        __asm__ volatile("mov %%cr2, %0" : "=r"(fault_addr));
+        if (demand_handle(fault_addr, r->err_code))
+            return;
+    }
+
     kprint_color("\n  [CPU exception] ", COLOR_RED_ON_BLACK);
     if (r->int_no < 32)
         kprint_color(exception_names[r->int_no], COLOR_RED_ON_BLACK);
