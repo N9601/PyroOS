@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-19-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-20-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -85,9 +85,11 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 - Kernel relocated to `0x10000` for headroom
 
 ### Memory
-- Paging: identity-mapped first 4 MB, `CR0.PG` enabled
+- Paging with `CR0.PG`; kernel and frame pool identity mapped
+- Physical frame allocator (bitmap) and a virtual memory manager
+- Per-process address spaces: the same virtual address, different frames
+- Demand paging: memory committed only when a page is first touched
 - Kernel heap: first-fit `kmalloc` / `kfree` with split and coalesce
-- `.bss` zeroed at startup by the entry stub
 
 ### Interrupts
 - IDT with 32 CPU-exception and 16 hardware-IRQ handlers
@@ -216,7 +218,10 @@ PyroOS/
 │   ├── isr.c            Interrupt dispatch, PIC remap, fault handling
 │   ├── keyboard.c       PS/2 keyboard (IRQ1) with an input ring buffer
 │   ├── timer.c          Programmable interval timer (IRQ0)
-│   ├── paging.c         Virtual memory
+│   ├── paging.c         Paging setup and the kernel address space
+│   ├── pmm.c            Physical page-frame allocator
+│   ├── vmm.c            Page directories, mapping, address spaces
+│   ├── demand.c         Demand paging on the page-fault path
 │   ├── kheap.c          Kernel heap (kmalloc / kfree)
 │   ├── ata.c            ATA PIO disk driver
 │   ├── fs.c             PyroFS filesystem
@@ -263,6 +268,7 @@ PyroOS/
 17. File syscalls: a ring-3 note editor saves and reloads files from PyroFS. (done)
 18. Shell command history and arrow-key support in the keyboard driver. (done)
 19. Kernel threads and synchronization primitives (spinlock, mutex, semaphore). (done)
+20. Per-process virtual address spaces, frame allocator and demand paging. (done)
 
 The larger subsystems planned next (per-process virtual memory, a POSIX process
 model, a VFS with FAT32/ext2, PCI and device drivers, a TCP/IP stack, a graphical
@@ -278,7 +284,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**19 milestones.** From a 512-byte boot sector to threads, mutexes, and ring-3 apps.
+**20 milestones.** From a 512-byte boot sector to per-process virtual memory.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>
