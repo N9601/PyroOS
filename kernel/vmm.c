@@ -54,8 +54,12 @@ page_dir_t vmm_create_dir(void)
         return 0;
     page_dir_t dir = (page_dir_t)phys;
     memset(dir, 0, PAGE_SIZE);
-    /* share the kernel's first 4 MB, so the kernel stays mapped after a switch */
+    /* Share the kernel's low mappings. Entry 0 keeps the kernel itself mapped
+       so the CPU can keep fetching instructions after a switch. Entry 1 keeps
+       the physical frame pool mapped, so the kernel can still edit this
+       address space's page tables while it is the active one. */
     dir[0] = kernel_dir[0];
+    dir[1] = kernel_dir[1];
     return dir;
 }
 
@@ -121,8 +125,8 @@ void vmm_destroy_dir(page_dir_t dir)
 {
     if (!dir || dir == kernel_dir)
         return;
-    /* entry 0 is the shared kernel mapping and is never freed */
-    for (uint32_t di = 1; di < 1024; di++) {
+    /* entries 0 and 1 are shared kernel mappings and are never freed */
+    for (uint32_t di = 2; di < 1024; di++) {
         if (!(dir[di] & PF_PRESENT))
             continue;
         uint32_t *tab = (uint32_t *)FRAME_OF(dir[di]);

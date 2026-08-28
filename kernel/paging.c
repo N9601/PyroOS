@@ -31,6 +31,13 @@
 static uint32_t page_directory[1024] __attribute__((aligned(4096)));
 static uint32_t first_page_table[1024] __attribute__((aligned(4096)));
 
+/* A second table identity-maps 4 MB to 8 MB. That range is the physical frame
+   pool, and the kernel must be able to write to a frame the moment it is
+   allocated: a new page directory or page table is edited through its own
+   physical address. Without this mapping the first vmm_create_dir faults. It
+   is supervisor only, so ring 3 still cannot reach the pool. */
+static uint32_t second_page_table[1024] __attribute__((aligned(4096)));
+
 /* Exposed so the virtual memory manager can adopt this directory as the
    kernel address space rather than building a second one. */
 uint32_t *paging_boot_directory(void)
@@ -54,9 +61,16 @@ void paging_install(void)
         first_page_table[i] = addr | flags;
     }
 
-    /* Directory entry 0 points at that table. All other directory entries stay
-       zero (not present), so touching memory above 4 MB will page-fault. */
+    /* Identity-map the frame pool, 4 MB to 8 MB, kernel only. */
+    for (int i = 0; i < 1024; i++)
+        second_page_table[i] = (0x00400000u + (uint32_t)(i * 0x1000))
+                               | PAGE_PRESENT | PAGE_RW;
+
+    /* Directory entry 0 covers 0 to 4 MB, entry 1 covers 4 to 8 MB. Every other
+       entry stays zero, so memory above 8 MB is unmapped and faults on touch,
+       which is exactly what demand paging needs in order to be triggered. */
     page_directory[0] = ((uint32_t)first_page_table) | PAGE_PRESENT | PAGE_RW | PAGE_USER;
+    page_directory[1] = ((uint32_t)second_page_table) | PAGE_PRESENT | PAGE_RW;
 
     /* Load the directory address into CR3. */
     __asm__ volatile("mov %0, %%cr3" :: "r"(page_directory));

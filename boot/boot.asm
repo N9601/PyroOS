@@ -15,9 +15,12 @@ KERNEL_OFFSET  equ 0x10000  ; where we load the kernel: 64 KB, safely ABOVE the
                             ; boot sector (0x7C00) and real-mode stack (0x9000),
                             ; so the disk load can't overwrite running code. The
                             ; linker script builds the kernel to run here.
-KERNEL_SECTORS equ 60       ; how many 512-byte sectors of kernel to load
-                            ; (60 = 30 KB; raise with the image size in the
-                            ;  Makefile if the kernel outgrows it)
+KERNEL_SECTORS equ 120      ; how many 512-byte sectors of kernel to load
+                            ; (120 = 60 KB). Keep this under 128: BIOS extended
+                            ; reads are limited to 127 sectors per call, and
+                            ; asking for more just fails. Too small is worse:
+                            ; the kernel truncates silently, which looks like
+                            ; missing code rather than a clean error.
 
 start:
     mov [BOOT_DRIVE], dl     ; save BIOS boot drive for later use

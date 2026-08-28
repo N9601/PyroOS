@@ -18,6 +18,9 @@
 #include "syscall.h"
 #include "usermode.h"
 #include "isr.h"
+#include "pmm.h"
+#include "vmm.h"
+#include "demand.h"
 #include "context.h"
 #include "logo.h"
 
@@ -121,6 +124,7 @@ static void cmd_help(void)
     kprint("  tasks         cooperative multitasking demo\n");
     kprint("  spin          preemptive multitasking demo\n");
     kprint("  threads       mutex vs race-condition demo\n");
+    kprint("  vm            address spaces and demand paging\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
     kprint("  user          run the built-in ring-3 demo\n");
     kprint("  exec <f>      load a program from disk and run it in ring 3\n");
@@ -178,6 +182,48 @@ static void execute(const char *cmd)
     } else if (streq(cmd, "spin")) {
         kprint("  two non-yielding tasks, preempted by the timer (~2s):\n");
         preempt_demo();
+    } else if (streq(cmd, "vm")) {
+        kprint("  physical frames: ");
+        kprint_dec(pmm_free_frames()); kprint(" free of ");
+        kprint_dec(pmm_total_frames()); kprint("\n");
+
+        /* Two address spaces, same virtual address, different physical memory. */
+        page_dir_t a = vmm_create_dir();
+        page_dir_t b = vmm_create_dir();
+        if (!a || !b) {
+            kprint_color("  out of memory\n", COLOR_RED_ON_BLACK);
+        } else {
+            uint32_t v = 0x00800000;      /* 8 MB, above the shared kernel range */
+            vmm_map_alloc(a, v, PF_PRESENT | PF_RW);
+            vmm_map_alloc(b, v, PF_PRESENT | PF_RW);
+            kprint("  virtual "); kprint_hex(v);
+            kprint(" maps to "); kprint_hex(vmm_translate(a, v));
+            kprint(" in space A, "); kprint_hex(vmm_translate(b, v));
+            kprint(" in space B");
+            kprint(vmm_translate(a, v) != vmm_translate(b, v)
+                   ? "  (isolated)\n" : "  (SHARED, wrong)\n");
+
+            /* Demand paging: promise 4 MB, commit nothing, then touch it. */
+            uint32_t before = demand_faults_served();
+            demand_region(vmm_kernel_dir(), 0x01000000, 0x01400000,
+                          PF_PRESENT | PF_RW);
+            kprint("  promised 4 MB at 0x01000000, no frames committed\n");
+            volatile uint32_t *p = (volatile uint32_t *)0x01000000;
+            p[0] = 0xC0FFEE;
+            p[2048] = 0xBEEF;
+            p[4096] = 0xF00D;
+            kprint("  touched 3 pages, faults served ");
+            kprint_dec(demand_faults_served() - before);
+            kprint(", read back ");
+            kprint_hex(p[0]); kprint(" ");
+            kprint_hex(p[2048]); kprint(" ");
+            kprint_hex(p[4096]); kprint("\n");
+
+            vmm_destroy_dir(a);
+            vmm_destroy_dir(b);
+            kprint("  both spaces freed, frames free now ");
+            kprint_dec(pmm_free_frames()); kprint("\n");
+        }
     } else if (streq(cmd, "threads")) {
         kprint("  synchronization: a race condition and its fix with a mutex.\n");
         threads_demo();
