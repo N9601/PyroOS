@@ -31,6 +31,13 @@
 static uint32_t page_directory[1024] __attribute__((aligned(4096)));
 static uint32_t first_page_table[1024] __attribute__((aligned(4096)));
 
+/* Exposed so the virtual memory manager can adopt this directory as the
+   kernel address space rather than building a second one. */
+uint32_t *paging_boot_directory(void)
+{
+    return page_directory;
+}
+
 void paging_install(void)
 {
     /* Identity-map the first 4 MB. Only the user zone (0x80000..0xFFFFF) gets
