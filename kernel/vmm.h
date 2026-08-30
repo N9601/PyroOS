@@ -27,6 +27,8 @@ int         vmm_map(page_dir_t dir, uint32_t virt, uint32_t phys, uint32_t flags
 int         vmm_map_alloc(page_dir_t dir, uint32_t virt, uint32_t flags);
 uint32_t    vmm_translate(page_dir_t dir, uint32_t virt);   /* 0 if unmapped */
 void        vmm_unmap(page_dir_t dir, uint32_t virt);
+page_dir_t  vmm_clone_dir(page_dir_t src);     /* deep copy: the memory half of fork */
+uint32_t    vmm_dir_frames(page_dir_t dir);    /* private frames it holds */
 void        vmm_flush(uint32_t virt);
 
 #endif

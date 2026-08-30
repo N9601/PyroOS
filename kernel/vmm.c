@@ -139,3 +139,82 @@ void vmm_destroy_dir(page_dir_t dir)
     }
     pmm_free((uint32_t)dir);
 }
+
+/* ----------------------------------------------------------------------------
+ *  vmm_clone_dir: a deep copy of an address space.
+ *
+ *  This is the memory half of fork. The child must see the same values at the
+ *  same virtual addresses as the parent, but writing to one must not be visible
+ *  in the other. So every private page gets a fresh frame with the parent's
+ *  bytes copied into it, and the child's page tables point at the copies.
+ *
+ *  Directory entries 0 and 1 are shared kernel mappings and are aliased, not
+ *  copied: entry 0 keeps the kernel mapped so execution survives the CR3 load,
+ *  entry 1 keeps the frame pool mapped so the kernel can keep editing tables.
+ *
+ *  The copying itself is safe because every frame lives in the identity-mapped
+ *  0 to 8 MB window, so a physical frame address is directly dereferenceable
+ *  while the kernel directory is loaded. A later copy-on-write pass would map
+ *  both sides read-only and duplicate only on the first write; this eager copy
+ *  is the correct behaviour, just not yet the cheap one.
+ * --------------------------------------------------------------------------*/
+page_dir_t vmm_clone_dir(page_dir_t src)
+{
+    if (!src)
+        return 0;
+
+    page_dir_t dst = vmm_create_dir();      /* already shares entries 0 and 1 */
+    if (!dst)
+        return 0;
+
+    for (uint32_t di = 2; di < 1024; di++) {
+        if (!(src[di] & PF_PRESENT))
+            continue;
+
+        uint32_t tab_phys = pmm_alloc();    /* the child needs its own table */
+        if (!tab_phys) {
+            vmm_destroy_dir(dst);           /* out of memory: leave nothing behind */
+            return 0;
+        }
+        uint32_t *src_tab = (uint32_t *)FRAME_OF(src[di]);
+        uint32_t *dst_tab = (uint32_t *)tab_phys;
+        memset(dst_tab, 0, PAGE_SIZE);
+        dst[di] = tab_phys | (src[di] & 0xFFF);
+
+        for (uint32_t ti = 0; ti < 1024; ti++) {
+            uint32_t e = src_tab[ti];
+            if (!(e & PF_PRESENT))
+                continue;                   /* not-present entries carry a
+                                               demand-paging promise, not data,
+                                               and copy across as absent */
+            uint32_t frame = pmm_alloc();
+            if (!frame) {
+                vmm_destroy_dir(dst);
+                return 0;
+            }
+            memcpy((void *)frame, (void *)FRAME_OF(e), PAGE_SIZE);
+            dst_tab[ti] = frame | (e & 0xFFF);
+        }
+    }
+    return dst;
+}
+
+/* How many private frames an address space is holding: its page tables plus
+   the pages they map. Used to show that a clone really did duplicate memory
+   and that freeing it really does give the frames back. */
+uint32_t vmm_dir_frames(page_dir_t dir)
+{
+    if (!dir)
+        return 0;
+    uint32_t n = 1;                         /* the directory frame itself */
+    for (uint32_t di = 2; di < 1024; di++) {
+        if (!(dir[di] & PF_PRESENT))
+            continue;
+        n++;                                /* the page table */
+        uint32_t *tab = (uint32_t *)FRAME_OF(dir[di]);
+        for (uint32_t ti = 0; ti < 1024; ti++)
+            if (tab[ti] & PF_PRESENT)
+                n++;
+    }
+    return n;
+}
