@@ -21,6 +21,7 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "demand.h"
+#include "proc.h"
 #include "context.h"
 #include "logo.h"
 
@@ -125,6 +126,7 @@ static void cmd_help(void)
     kprint("  spin          preemptive multitasking demo\n");
     kprint("  threads       mutex vs race-condition demo\n");
     kprint("  vm            address spaces and demand paging\n");
+    kprint("  ps            list the process table\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
     kprint("  user          run the built-in ring-3 demo\n");
     kprint("  exec <f>      load a program from disk and run it in ring 3\n");
@@ -224,6 +226,9 @@ static void execute(const char *cmd)
             kprint("  both spaces freed, frames free now ");
             kprint_dec(pmm_free_frames()); kprint("\n");
         }
+    } else if (streq(cmd, "ps")) {
+        proc_list();
+
     } else if (streq(cmd, "threads")) {
         kprint("  synchronization: a race condition and its fix with a mutex.\n");
         threads_demo();

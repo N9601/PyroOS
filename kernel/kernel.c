@@ -11,6 +11,7 @@
 #include "paging.h"
 #include "pmm.h"
 #include "vmm.h"
+#include "proc.h"
 #include "kheap.h"
 #include "timer.h"
 #include "keyboard.h"
@@ -29,6 +30,7 @@ void kmain(void)
     paging_install();       /* virtual memory (identity-map first 4 MB) */
     pmm_install(8 * 1024 * 1024);    /* frame pool: 4 MB to 8 MB, identity mapped */
     vmm_install();                   /* adopt the boot directory as the kernel space */
+    proc_install();                  /* process table; slot 0 is the kernel itself */
     heap_install();         /* dynamic memory (kmalloc/kfree) */
     timer_install(50);      /* 50 Hz system timer */
     keyboard_install();     /* keyboard IRQ + input buffer */
