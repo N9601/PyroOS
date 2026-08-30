@@ -9,6 +9,7 @@
  * ==========================================================================*/
 #include "elf.h"
 #include "screen.h"
+#include "string.h"
 
 elf_status_t elf_validate(const void *image, uint32_t size)
 {
@@ -108,4 +109,55 @@ void elf_dump(const void *image, uint32_t size)
         }
         kprint_char('\n');
     }
+}
+
+/* ----------------------------------------------------------------------------
+ *  elf_load: copy a validated image into memory and report the entry point.
+ *
+ *  For each PT_LOAD segment: copy p_filesz bytes from the file to p_vaddr, then
+ *  zero the p_memsz - p_filesz bytes beyond it. That second step is .bss. The
+ *  linker records how much zeroed space the program needs but does not store
+ *  the zeroes, because a megabyte of nothing is still a megabyte on disk. A
+ *  loader that skips it hands the program whatever the last tenant left behind,
+ *  which is both a correctness bug and an information leak.
+ *
+ *  Segments are confined to the user zone. Nothing stops a hand-crafted ELF
+ *  from claiming p_vaddr in the middle of the kernel, and honouring that would
+ *  turn "run this program" into "overwrite the interrupt table".
+ * --------------------------------------------------------------------------*/
+int elf_load(const void *image, uint32_t size, uint32_t lo, uint32_t hi,
+             uint32_t *entry_out)
+{
+    if (elf_validate(image, size) != ELF_OK)
+        return -1;
+
+    const elf32_ehdr_t *eh = (const elf32_ehdr_t *)image;
+    const elf32_phdr_t *ph = (const elf32_phdr_t *)((const uint8_t *)image + eh->e_phoff);
+
+    /* Check every segment fits the permitted window before copying any of them,
+       so a bad ELF cannot leave memory half-written. */
+    for (uint16_t i = 0; i < eh->e_phnum; i++) {
+        if (ph[i].p_type != PT_LOAD || ph[i].p_memsz == 0)
+            continue;
+        uint64_t start = (uint64_t)ph[i].p_vaddr;
+        uint64_t end   = start + (uint64_t)ph[i].p_memsz;
+        if (start < (uint64_t)lo || end > (uint64_t)hi)
+            return -2;                  /* segment outside the user zone */
+    }
+
+    if (eh->e_entry < lo || eh->e_entry >= hi)
+        return -3;                      /* entry point outside the user zone */
+
+    for (uint16_t i = 0; i < eh->e_phnum; i++) {
+        if (ph[i].p_type != PT_LOAD || ph[i].p_memsz == 0)
+            continue;
+        uint8_t *dst = (uint8_t *)ph[i].p_vaddr;
+        const uint8_t *src = (const uint8_t *)image + ph[i].p_offset;
+        memcpy(dst, src, ph[i].p_filesz);
+        memset(dst + ph[i].p_filesz, 0, ph[i].p_memsz - ph[i].p_filesz);
+    }
+
+    if (entry_out)
+        *entry_out = eh->e_entry;
+    return 0;
 }

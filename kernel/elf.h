@@ -82,4 +82,9 @@ elf_status_t elf_validate(const void *image, uint32_t size);
 const char  *elf_status_name(elf_status_t s);
 void         elf_dump(const void *image, uint32_t size);   /* print the headers */
 
+/* Load a validated image. Segments and entry must fall inside [lo, hi).
+   Returns 0, or -1 invalid, -2 segment out of range, -3 entry out of range. */
+int          elf_load(const void *image, uint32_t size, uint32_t lo, uint32_t hi,
+                      uint32_t *entry_out);
+
 #endif
