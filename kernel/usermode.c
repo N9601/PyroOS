@@ -26,8 +26,6 @@ extern unsigned int user_prog_len;
 
 static ctx_t kernel_ctx;
 
-/* The ring-3 stack lives at the top of the user zone and grows down. */
-#define USER_STACK_TOP 0x000F0000u
 
 /* Called from the SYS_EXIT syscall handler (running in ring 0). */
 void user_exit(void)

@@ -300,15 +300,35 @@ static void execute(const char *cmd)
     } else if (starts_with(cmd, "exec ")) {
         const char *name = cmd + 5;
         while (*name == ' ') name++;
+
+        /* Read the file somewhere neutral first. A program is not loaded by
+           dropping it at a fixed address any more: where its pieces belong is
+           the ELF's business, and we cannot know that until it is parsed. */
+        static uint8_t img[32 * 1024];
         uint32_t size = 0;
-        if (fs_read(name, (void *)USER_LOAD_ADDR, 64 * 1024, &size) == 0 && size > 0) {
-            kprint("  loaded "); kprint(name); kprint(" (");
-            kprint_dec(size); kprint(" bytes) at "); kprint_hex(USER_LOAD_ADDR);
-            kprint(", running in ring 3:\n");
-            run_user_at(USER_LOAD_ADDR);
-        } else {
+        if (fs_read(name, img, sizeof(img), &size) != 0 || size == 0) {
             kprint_color("  no such program\n", COLOR_RED_ON_BLACK);
+        } else if (elf_validate(img, size) == ELF_OK) {
+            uint32_t entry = 0;
+            int rc = elf_load(img, size, USER_LOAD_ADDR, USER_STACK_TOP, &entry);
+            if (rc != 0) {
+                kprint_color("  refused: ", COLOR_RED_ON_BLACK);
+                kprint(rc == -2 ? "a segment lies outside the user zone\n"
+                                : "the entry point lies outside the user zone\n");
+            } else {
+                kprint("  loaded "); kprint(name); kprint(" as ELF, entry ");
+                kprint_hex(entry); kprint(", running in ring 3:\n");
+                run_user_at(entry);
+            }
+        } else {
+            /* A flat binary: no headers, so the old contract still applies.
+               It was linked to run at USER_LOAD_ADDR and starts at byte zero. */
+            memcpy((void *)USER_LOAD_ADDR, img, size);
+            kprint("  loaded "); kprint(name); kprint(" as a flat binary (");
+            kprint_dec(size); kprint(" bytes), running in ring 3:\n");
+            run_user_at(USER_LOAD_ADDR);
         }
+
     } else if (starts_with(cmd, "elfinfo ")) {
         const char *name = cmd + 8;
         while (*name == ' ') name++;

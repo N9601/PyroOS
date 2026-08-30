@@ -14,4 +14,8 @@ void user_exit(void);          /* called by SYS_EXIT to unwind back to kernel */
    base address in user/prog.ld. */
 #define USER_LOAD_ADDR 0x00080000
 
+/* The ring-3 stack lives at the top of the user zone and grows down. Together
+   with USER_LOAD_ADDR this bounds the region a program may occupy. */
+#define USER_STACK_TOP 0x000F0000u
+
 #endif
