@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-21-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-22-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -14,7 +14,7 @@
 
 ### **A from-scratch x86 operating system.**
 
-Bootloader, 32-bit protected mode, a C kernel, paging, a heap, interrupts, a filesystem, preemptive multitasking, ring-3 user mode, and system calls. No libraries, no host OS underneath. Every byte that runs is code in this repo.
+Bootloader, 32-bit protected mode, a C kernel, paging, a heap, interrupts, a filesystem, preemptive multitasking, ring-3 user mode, system calls, processes with fork and wait, and a real ELF loader. No libraries, no host OS underneath. Every byte that runs is code in this repo.
 
 <sub>Bare metal. From the bootloader up.</sub>
 
@@ -52,6 +52,8 @@ pyro> logo
 pyro> write hello world
 pyro> cat hello
 pyro> ls
+pyro> exec prog.elf hello tarang
+pyro> elfinfo prog.elf
 pyro> exec ask
 pyro> exec calc
 pyro> exec guess
@@ -115,6 +117,8 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 ### Userland
 - Ring-3 user mode via a Task State Segment
 - `int 0x80` syscalls: write, read, uptime, sleep, rand, fwrite, fread, exit
+- Real ELF32 loader: segment loading, .bss zeroing, bounds-checked headers
+- argc and argv passed on the user stack, flat binaries still supported
 - Loads and runs separately-compiled programs from disk
 - Apps: a calculator, a guessing game, and a note editor that saves files
 - User/supervisor memory protection, with syscall pointer validation
@@ -147,6 +151,7 @@ cat <f>       print a file               ticks     timer ticks since boot
 mem           test the heap allocator    reboot    restart the machine
 vm            address spaces, demand paging  ps    list the process table
 fork          fork, exit and wait between two processes
+elfinfo <f>   parse and validate a program as ELF
 ```
 
 ---
@@ -228,6 +233,8 @@ PyroOS/
 │   ├── vmm.c            Page directories, mapping, address spaces
 │   ├── demand.c         Demand paging on the page-fault path
 │   ├── proc.c           Process table, fork, exit and wait
+│   ├── elf.c            ELF32 validation and segment loading
+│   ├── args.c           argc/argv construction on the user stack
 │   ├── kheap.c          Kernel heap (kmalloc / kfree)
 │   ├── ata.c            ATA PIO disk driver
 │   ├── fs.c             PyroFS filesystem
@@ -276,6 +283,7 @@ PyroOS/
 19. Kernel threads and synchronization primitives (spinlock, mutex, semaphore). (done)
 20. Per-process virtual address spaces, frame allocator and demand paging. (done)
 21. Process model: a process table, fork by address-space cloning, exit and wait. (done)
+22. ELF loader: real ELF32 binaries, segment loading, and argc/argv. (done)
 
 The larger subsystems planned next (per-process virtual memory, a POSIX process
 model, a VFS with FAT32/ext2, PCI and device drivers, a TCP/IP stack, a graphical
@@ -291,7 +299,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**21 milestones.** From a 512-byte boot sector to forking processes.
+**22 milestones.** From a 512-byte boot sector to loading real ELF binaries.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>

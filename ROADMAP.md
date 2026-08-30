@@ -29,17 +29,22 @@ copy-on-write, isolating processes through the MMU.
 Keywords: virtual memory, MMU, paging, demand paging, copy-on-write, page fault
 handler, memory isolation, TLB.
 
-### M21. POSIX-style process model (part 1 done)
+### M21. POSIX-style process model (parts 1 and 2 done)
 A UNIX-style process model with fork, exec, and wait, a full ELF binary loader,
 argument passing, and process lifecycle management.
 Keywords: POSIX, process management, fork, exec, ELF loader, system calls, ABI,
 inter-process communication.
 
 Done so far: the process table, address-space cloning, and the fork/exit/wait
-lifecycle with zombie reaping and orphan re-parenting. Still to come: exec with
-a real ELF loader replacing the flat-binary loader, argument passing, exposing
-the three calls to ring 3 through int 0x80, and copy-on-write instead of the
-current eager page copy.
+lifecycle with zombie reaping and orphan re-parenting. Then an ELF32 loader with
+bounds-checked headers, exec running real ELF binaries while flat binaries keep
+working, and argc/argv built on the user stack.
+
+Still to come: exposing fork, exit and wait to ring 3 through int 0x80, which
+needs the syscall trap frame saved in the PCB so a forked child can be resumed
+in user mode; per-segment page permissions, so a read-only segment is actually
+mapped read-only instead of merely being labelled that way; and copy-on-write
+instead of the current eager page copy.
 
 ### M22. Virtual File System and a real on-disk filesystem
 A Virtual File System layer over a FAT32 or ext2 driver, with a block buffer
