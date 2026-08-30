@@ -23,11 +23,14 @@
 #include "demand.h"
 #include "proc.h"
 #include "elf.h"
+#include "args.h"
+#include "args.h"
 #include "context.h"
 #include "logo.h"
 
 #include <stdint.h>
 
+#define NAME_MAX 24
 #define LINE_MAX 128
 
 static char     line[LINE_MAX];
@@ -298,8 +301,18 @@ static void execute(const char *cmd)
         kprint("  dropping to ring 3 (user mode)...\n");
         run_user_program();
     } else if (starts_with(cmd, "exec ")) {
-        const char *name = cmd + 5;
-        while (*name == ' ') name++;
+        const char *tail = cmd + 5;
+        while (*tail == ' ') tail++;
+
+        /* The whole tail is the program's command line, so it becomes argv.
+           Only its first word is the filename to open. */
+        char name[NAME_MAX];
+        int nl = 0;
+        while (tail[nl] && tail[nl] != ' ' && nl < NAME_MAX - 1) {
+            name[nl] = tail[nl];
+            nl++;
+        }
+        name[nl] = 0;
 
         /* Read the file somewhere neutral first. A program is not loaded by
            dropping it at a fixed address any more: where its pieces belong is
@@ -318,7 +331,14 @@ static void execute(const char *cmd)
             } else {
                 kprint("  loaded "); kprint(name); kprint(" as ELF, entry ");
                 kprint_hex(entry); kprint(", running in ring 3:\n");
-                run_user_at(entry);
+                /* Hand the program its own command line. args_build writes
+                   the block into the user zone and returns the stack pointer
+                   the program should start on. */
+                uint32_t esp = args_build(tail, USER_STACK_TOP);
+                if (esp)
+                    run_user_at_sp(entry, esp);
+                else
+                    run_user_at(entry);   /* did not fit; run without them */
             }
         } else {
             /* A flat binary: no headers, so the old contract still applies.

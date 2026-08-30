@@ -21,12 +21,28 @@ static void sys_exit(void)
 }
 
 /* Placed in its own section so the linker puts it at the very start (0x80000),
-   which is where the kernel jumps after loading the program. */
+   which is where the kernel jumps after loading the program.
+
+   It takes argc and argv like any UNIX program. The kernel built them on this
+   stack before the first instruction ran, so reading them costs nothing: the
+   strings are already sitting in the user zone where ring 3 can reach them. */
 __attribute__((section(".text.start")))
-void _start(void)
+void _start(int argc, char **argv)
 {
     sys_write("  [prog] hello from a separately-compiled program.\n");
     sys_write("  [prog] loaded from PyroFS, running in ring 3, syscalls only.\n");
+
+    sys_write("  [prog] my arguments:\n");
+    for (int i = 0; i < argc; i++) {
+        char label[10] = { ' ', ' ', ' ', ' ', 'a', 'r', 'g', 'v', '[', 0 };
+        char idx[2] = { (char)('0' + i), 0 };
+        sys_write(label);
+        sys_write(idx);
+        sys_write("] = ");
+        sys_write(argv[i]);
+        sys_write("\n");
+    }
+
     sys_exit();
 
     for (;;)                     /* never reached: sys_exit does not return */

@@ -37,13 +37,20 @@ void user_exit(void)
    `entry` must point into the user zone. */
 void run_user_at(uint32_t entry)
 {
+    run_user_at_sp(entry, USER_STACK_TOP);
+}
+
+/* The same, but starting on a stack the caller has already prepared, which is
+   how a program receives argc and argv. */
+void run_user_at_sp(uint32_t entry, uint32_t esp)
+{
     g_user_faulted = 0;
 
     if (save_context(&kernel_ctx) == 0) {
         /* A fault in ring 3 should unwind to the same place as a clean exit. */
         fault_recovery_ctx = kernel_ctx;
         fault_arm();
-        enter_user_mode((void (*)(void))entry, USER_STACK_TOP);
+        enter_user_mode((void (*)(void))entry, esp);
     }
 
     fault_disarm();
