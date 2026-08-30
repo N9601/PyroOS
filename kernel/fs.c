@@ -21,7 +21,12 @@
 #define DATA_LBA     101
 #define MAX_FILES    16
 #define NAME_LEN     20
-#define SLOT_SECTORS 8              /* fixed 4 KB per file */
+#define SLOT_SECTORS 32             /* fixed 16 KB per file. Was 8 (4 KB), which
+                                       silently truncated any ELF: the linker
+                                       page-aligns .text to file offset 0x1000,
+                                       so even a 300-byte program lands past a
+                                       4 KB cut. 16 files x 16 KB = 256 KB, well
+                                       inside the 1 MB image. */
 
 typedef struct {
     char     name[NAME_LEN];

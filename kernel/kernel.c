@@ -48,6 +48,8 @@ void kmain(void)
     extern unsigned int calc_prog_len;
     extern const unsigned char guess_prog[];
     extern unsigned int guess_prog_len;
+    extern const unsigned char prog_elf[];
+    extern unsigned int prog_elf_len;
     extern const unsigned char note_prog[];
     extern unsigned int note_prog_len;
     fs_write("prog", user_prog, user_prog_len);
@@ -56,6 +58,7 @@ void kmain(void)
     fs_write("calc", calc_prog, calc_prog_len);
     fs_write("guess", guess_prog, guess_prog_len);
     fs_write("note", note_prog, note_prog_len);
+    fs_write("prog.elf", prog_elf, prog_elf_len);   /* the same program, unflattened */
 
     kprint("Subsystems: interrupts, paging, heap, timer, keyboard, fs.\n");
 

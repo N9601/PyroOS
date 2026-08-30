@@ -22,6 +22,7 @@
 #include "vmm.h"
 #include "demand.h"
 #include "proc.h"
+#include "elf.h"
 #include "context.h"
 #include "logo.h"
 
@@ -126,6 +127,7 @@ static void cmd_help(void)
     kprint("  spin          preemptive multitasking demo\n");
     kprint("  threads       mutex vs race-condition demo\n");
     kprint("  vm            address spaces and demand paging\n");
+    kprint("  elfinfo <f>   parse and validate a program as ELF\n");
     kprint("  fork          fork, exit and wait between two processes\n");
     kprint("  ps            list the process table\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
@@ -307,6 +309,19 @@ static void execute(const char *cmd)
         } else {
             kprint_color("  no such program\n", COLOR_RED_ON_BLACK);
         }
+    } else if (starts_with(cmd, "elfinfo ")) {
+        const char *name = cmd + 8;
+        while (*name == ' ') name++;
+        static uint8_t img[32 * 1024];
+        uint32_t size = 0;
+        if (fs_read(name, img, sizeof(img), &size) == 0 && size > 0) {
+            kprint("  "); kprint(name); kprint(", ");
+            kprint_dec(size); kprint(" bytes on disk\n");
+            elf_dump(img, size);
+        } else {
+            kprint_color("  no such program\n", COLOR_RED_ON_BLACK);
+        }
+
     } else if (streq(cmd, "fault")) {
         kprint("  reading unmapped memory at 0x00800000 (above the 4 MB map)...\n");
         /* save_context is called directly here so its stack frame survives

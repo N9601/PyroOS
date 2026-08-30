@@ -34,7 +34,8 @@ ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUIL
 # Standalone user programs, compiled separately and embedded as byte arrays so
 # the kernel can write them into the filesystem at boot.
 EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o $(BUILD)/askprog.o \
-             $(BUILD)/calcprog.o $(BUILD)/guessprog.o $(BUILD)/noteprog.o
+             $(BUILD)/calcprog.o $(BUILD)/guessprog.o $(BUILD)/noteprog.o \
+             $(BUILD)/progelf.o
 
 .PHONY: all run clean
 
@@ -185,3 +186,17 @@ run-sdl: all
 
 clean:
 	rm -rf $(BUILD)
+
+# --- embed the linked ELF of prog, not just its flattened bytes ---
+# The flat .bin threw away the entry point, the segment table and the .bss size.
+# Keeping the ELF gives the loader all three. Stripped first, because symbol and
+# string tables are for debuggers and would only pad the kernel image.
+$(BUILD)/prog_stripped.elf: $(BUILD)/prog.bin
+	objcopy --strip-all $(BUILD)/prog.elf $@
+
+$(BUILD)/progelf.c: $(BUILD)/prog_stripped.elf
+	cd $(BUILD) && xxd -i prog_stripped.elf | \
+		sed 's/prog_stripped_elf/prog_elf/g; s/^unsigned char/const unsigned char/' > progelf.c
+
+$(BUILD)/progelf.o: $(BUILD)/progelf.c
+	$(CC) $(CFLAGS) -c $< -o $@
