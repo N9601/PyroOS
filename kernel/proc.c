@@ -158,6 +158,17 @@ void proc_exit(int code)
     p->exit_code = code;
     p->state = PROC_ZOMBIE;
 
+    /* If the process calling exit is the one on the CPU, its page directory is
+       loaded in CR3 right now. Freeing memory we are standing on would leave
+       the CPU walking reclaimed page tables, so fall back to the kernel address
+       space first. This is the kernel equivalent of stepping off the plank
+       before sawing it. */
+    if (p == proc_current()) {
+        vmm_switch(vmm_kernel_dir());
+        current_idx = 0;
+        table[0].state = PROC_RUNNING;
+    }
+
     /* Its memory is no longer needed; only the exit status has to survive
        until the parent reaps it. Release the address space now rather than
        holding megabytes hostage to a parent that may be slow to call wait. */

@@ -126,6 +126,7 @@ static void cmd_help(void)
     kprint("  spin          preemptive multitasking demo\n");
     kprint("  threads       mutex vs race-condition demo\n");
     kprint("  vm            address spaces and demand paging\n");
+    kprint("  fork          fork, exit and wait between two processes\n");
     kprint("  ps            list the process table\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
     kprint("  user          run the built-in ring-3 demo\n");
@@ -226,6 +227,58 @@ static void execute(const char *cmd)
             kprint("  both spaces freed, frames free now ");
             kprint_dec(pmm_free_frames()); kprint("\n");
         }
+    } else if (streq(cmd, "fork")) {
+        /* Build a parent process with one page of private memory, fork it, and
+           show that the child starts with the parent's data but diverges the
+           moment either side writes. Then run the full exit/wait handshake. */
+        uint32_t v = 0x00800000;              /* above the shared kernel range */
+        uint32_t free_before = pmm_free_frames();
+
+        proc_t *par = proc_alloc("forkdemo");
+        if (!par) {
+            kprint_color("  process table full\n", COLOR_RED_ON_BLACK);
+        } else {
+            par->dir = vmm_create_dir();
+            vmm_map_alloc(par->dir, v, PF_PRESENT | PF_RW);
+            proc_switch_to(par->pid);
+            *(volatile uint32_t *)v = 0x1111AAAA;
+            kprint("  parent pid "); kprint_dec((uint32_t)par->pid);
+            kprint(" wrote "); kprint_hex(*(volatile uint32_t *)v);
+            kprint(" at "); kprint_hex(v); kprint("\n");
+
+            int kid = proc_fork();            /* the parent is current, so it forks */
+            if (kid < 0) {
+                kprint_color("  fork failed\n", COLOR_RED_ON_BLACK);
+            } else {
+                kprint("  forked child pid "); kprint_dec((uint32_t)kid);
+                kprint(", it holds "); kprint_dec(vmm_dir_frames(proc_get(kid)->dir));
+                kprint(" private frames\n");
+
+                proc_switch_to(kid);
+                kprint("  child sees "); kprint_hex(*(volatile uint32_t *)v);
+                kprint(" (inherited)\n");
+                *(volatile uint32_t *)v = 0x2222BBBB;
+                kprint("  child overwrote it with ");
+                kprint_hex(*(volatile uint32_t *)v); kprint("\n");
+                proc_exit(7);                 /* child dies, becomes a zombie */
+
+                proc_switch_to(par->pid);
+                kprint("  parent still sees "); kprint_hex(*(volatile uint32_t *)v);
+                kprint(*(volatile uint32_t *)v == 0x1111AAAA
+                       ? "  (isolated)\n" : "  (CLOBBERED, wrong)\n");
+
+                int status = -1;
+                int reaped = proc_wait(&status);
+                kprint("  parent reaped pid "); kprint_dec((uint32_t)reaped);
+                kprint(" with exit code "); kprint_dec((uint32_t)status); kprint("\n");
+            }
+            proc_exit(0);                     /* the parent finishes too */
+            proc_wait(&(int){0});             /* the kernel reaps its orphan */
+            kprint("  frames free: "); kprint_dec(free_before);
+            kprint(" before, "); kprint_dec(pmm_free_frames());
+            kprint(" after\n");
+        }
+
     } else if (streq(cmd, "ps")) {
         proc_list();
 
