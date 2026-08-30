@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-20-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-21-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -56,6 +56,8 @@ pyro> exec ask
 pyro> exec calc
 pyro> exec guess
 pyro> exec crash
+pyro> fork
+pyro> ps
 pyro> tasks
 pyro> spin
 pyro> user
@@ -88,6 +90,7 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 - Paging with `CR0.PG`; kernel and frame pool identity mapped
 - Physical frame allocator (bitmap) and a virtual memory manager
 - Per-process address spaces: the same virtual address, different frames
+- Processes: fork with a full address-space copy, exit, wait, zombie reaping
 - Demand paging: memory committed only when a page is first touched
 - Kernel heap: first-fit `kmalloc` / `kfree` with split and coalesce
 
@@ -142,6 +145,8 @@ ls            list files                 fault     trigger and recover a page fa
 write <f> <t> write text to a file       disk      check the boot disk
 cat <f>       print a file               ticks     timer ticks since boot
 mem           test the heap allocator    reboot    restart the machine
+vm            address spaces, demand paging  ps    list the process table
+fork          fork, exit and wait between two processes
 ```
 
 ---
@@ -222,6 +227,7 @@ PyroOS/
 │   ├── pmm.c            Physical page-frame allocator
 │   ├── vmm.c            Page directories, mapping, address spaces
 │   ├── demand.c         Demand paging on the page-fault path
+│   ├── proc.c           Process table, fork, exit and wait
 │   ├── kheap.c          Kernel heap (kmalloc / kfree)
 │   ├── ata.c            ATA PIO disk driver
 │   ├── fs.c             PyroFS filesystem
@@ -269,6 +275,7 @@ PyroOS/
 18. Shell command history and arrow-key support in the keyboard driver. (done)
 19. Kernel threads and synchronization primitives (spinlock, mutex, semaphore). (done)
 20. Per-process virtual address spaces, frame allocator and demand paging. (done)
+21. Process model: a process table, fork by address-space cloning, exit and wait. (done)
 
 The larger subsystems planned next (per-process virtual memory, a POSIX process
 model, a VFS with FAT32/ext2, PCI and device drivers, a TCP/IP stack, a graphical
@@ -284,7 +291,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**20 milestones.** From a 512-byte boot sector to per-process virtual memory.
+**21 milestones.** From a 512-byte boot sector to forking processes.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>
