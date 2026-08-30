@@ -115,3 +115,93 @@ void proc_list(void)
     kprint_dec(pmm_total_frames());
     kprint_char('\n');
 }
+
+/* ============================================================================
+ *  The UNIX process calls
+ * ----------------------------------------------------------------------------
+ *  fork duplicates a process, exit ends one, wait lets the parent collect the
+ *  result. The three are a set: without wait, a finished process would either
+ *  vanish before its parent could read its exit code, or sit in the table
+ *  forever. The zombie state is what resolves that -- the process is dead, but
+ *  its slot is held until someone asks how it died.
+ * ==========================================================================*/
+
+int proc_fork(void)
+{
+    proc_t *parent = proc_current();
+
+    proc_t *child = proc_alloc(parent->name);
+    if (!child)
+        return -1;                          /* process table full */
+
+    /* The child gets its own copy of the parent's memory. Same contents, same
+       virtual addresses, different physical frames. */
+    child->dir = vmm_clone_dir(parent->dir);
+    if (!child->dir) {
+        child->state = PROC_UNUSED;         /* nothing was allocated to free */
+        return -1;
+    }
+
+    child->ppid  = parent->pid;
+    child->entry = parent->entry;
+    child->brk   = parent->brk;
+    child->state = PROC_READY;
+    return child->pid;
+}
+
+void proc_exit(int code)
+{
+    proc_t *p = proc_current();
+    if (p->pid == 0)
+        return;                             /* the kernel does not exit */
+
+    p->exit_code = code;
+    p->state = PROC_ZOMBIE;
+
+    /* Its memory is no longer needed; only the exit status has to survive
+       until the parent reaps it. Release the address space now rather than
+       holding megabytes hostage to a parent that may be slow to call wait. */
+    if (p->dir && p->dir != vmm_kernel_dir()) {
+        vmm_destroy_dir(p->dir);
+        p->dir = 0;
+    }
+
+    /* Orphans are re-parented to the kernel, which reaps unconditionally, so
+       a dead parent cannot strand its children in the table forever. */
+    for (int i = 1; i < MAX_PROCS; i++)
+        if (table[i].state != PROC_UNUSED && table[i].ppid == p->pid)
+            table[i].ppid = 0;
+}
+
+int proc_wait(int *status)
+{
+    proc_t *me = proc_current();
+
+    for (int i = 1; i < MAX_PROCS; i++) {
+        proc_t *c = &table[i];
+        if (c->state != PROC_ZOMBIE || c->ppid != me->pid)
+            continue;
+        int pid = c->pid;
+        if (status)
+            *status = c->exit_code;
+        proc_free(c);                       /* the slot is finally released */
+        return pid;
+    }
+    return -1;                              /* no finished child of ours */
+}
+
+int proc_switch_to(int pid)
+{
+    proc_t *p = proc_get(pid);
+    if (!p || p->state == PROC_ZOMBIE || !p->dir)
+        return -1;
+
+    proc_t *old = proc_current();
+    if (old->state == PROC_RUNNING)
+        old->state = PROC_READY;
+
+    current_idx = (int)(p - table);
+    p->state = PROC_RUNNING;
+    vmm_switch(p->dir);                     /* the actual change of world */
+    return 0;
+}

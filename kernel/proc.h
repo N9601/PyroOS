@@ -43,4 +43,10 @@ int     proc_count(void);
 void    proc_list(void);                   /* print the table */
 const char *proc_state_name(proc_state_t s);
 
+/* ---- the UNIX process calls -------------------------------------------- */
+int  proc_fork(void);           /* duplicate the current process; child pid or -1 */
+void proc_exit(int code);       /* mark the current process a zombie */
+int  proc_wait(int *status);    /* reap one finished child; its pid or -1 */
+int  proc_switch_to(int pid);   /* make pid current and load its address space */
+
 #endif
