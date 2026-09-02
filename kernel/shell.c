@@ -24,7 +24,9 @@
 #include "proc.h"
 #include "elf.h"
 #include "args.h"
+#include "paging.h"
 #include "args.h"
+#include "paging.h"
 #include "context.h"
 #include "logo.h"
 
@@ -323,6 +325,7 @@ static void execute(const char *cmd)
             kprint_color("  no such program\n", COLOR_RED_ON_BLACK);
         } else if (elf_validate(img, size) == ELF_OK) {
             uint32_t entry = 0;
+            paging_reset_user_zone();   /* start from all-writable */
             int rc = elf_load(img, size, USER_LOAD_ADDR, USER_STACK_TOP, &entry);
             if (rc != 0) {
                 kprint_color("  refused: ", COLOR_RED_ON_BLACK);
@@ -331,6 +334,7 @@ static void execute(const char *cmd)
             } else {
                 kprint("  loaded "); kprint(name); kprint(" as ELF, entry ");
                 kprint_hex(entry); kprint(", running in ring 3:\n");
+                elf_protect(img);   /* read-only segments now fault on write */
                 /* Hand the program its own command line. args_build writes
                    the block into the user zone and returns the stack pointer
                    the program should start on. */

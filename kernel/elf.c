@@ -10,6 +10,7 @@
 #include "elf.h"
 #include "screen.h"
 #include "string.h"
+#include "paging.h"
 
 elf_status_t elf_validate(const void *image, uint32_t size)
 {
@@ -160,4 +161,25 @@ int elf_load(const void *image, uint32_t size, uint32_t lo, uint32_t hi,
     if (entry_out)
         *entry_out = eh->e_entry;
     return 0;
+}
+
+/* ----------------------------------------------------------------------------
+ *  elf_protect: apply each loadable segment's permissions after loading.
+ *
+ *  Called once the bytes are in place. For every PT_LOAD segment whose flags
+ *  lack PF_W, the pages it occupies are made read-only to ring 3, so a program
+ *  that writes through a bad pointer into its own code faults and is killed
+ *  rather than quietly corrupting itself. Writable segments are left alone;
+ *  the loader already reset the zone to writable before copying.
+ * --------------------------------------------------------------------------*/
+void elf_protect(const void *image)
+{
+    const elf32_ehdr_t *eh = (const elf32_ehdr_t *)image;
+    const elf32_phdr_t *ph = (const elf32_phdr_t *)((const uint8_t *)image + eh->e_phoff);
+    for (uint16_t i = 0; i < eh->e_phnum; i++) {
+        if (ph[i].p_type != PT_LOAD || ph[i].p_memsz == 0)
+            continue;
+        if (!(ph[i].p_flags & PF_W))
+            paging_set_user_writable(ph[i].p_vaddr, ph[i].p_memsz, 0);
+    }
 }

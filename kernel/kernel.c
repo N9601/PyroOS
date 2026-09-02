@@ -59,6 +59,9 @@ void kmain(void)
     fs_write("guess", guess_prog, guess_prog_len);
     fs_write("note", note_prog, note_prog_len);
     fs_write("prog.elf", prog_elf, prog_elf_len);   /* the same program, unflattened */
+    extern const unsigned char rocrash_elf[];
+    extern unsigned int rocrash_elf_len;
+    fs_write("rocrash", rocrash_elf, rocrash_elf_len);
 
     kprint("Subsystems: interrupts, paging, heap, timer, keyboard, fs.\n");
 

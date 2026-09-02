@@ -35,7 +35,7 @@ ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUIL
 # the kernel can write them into the filesystem at boot.
 EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o $(BUILD)/askprog.o \
              $(BUILD)/calcprog.o $(BUILD)/guessprog.o $(BUILD)/noteprog.o \
-             $(BUILD)/progelf.o
+             $(BUILD)/progelf.o $(BUILD)/rocrashelf.o
 
 .PHONY: all run clean
 
@@ -199,4 +199,18 @@ $(BUILD)/progelf.c: $(BUILD)/prog_stripped.elf
 		sed 's/prog_stripped_elf/prog_elf/g; s/^unsigned char/const unsigned char/' > progelf.c
 
 $(BUILD)/progelf.o: $(BUILD)/progelf.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# --- rocrash: writes to its own read-only code, embedded as a stripped ELF ---
+$(BUILD)/rocrash.o: user/rocrash.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD)/rocrash.elf: $(BUILD)/rocrash.o user/prog.ld
+	ld -m elf_i386 -z noexecstack -T user/prog.ld -o $@ $(BUILD)/rocrash.o
+$(BUILD)/rocrash_stripped.elf: $(BUILD)/rocrash.elf
+	objcopy --strip-all $< $@
+$(BUILD)/rocrashelf.c: $(BUILD)/rocrash_stripped.elf
+	cd $(BUILD) && xxd -i rocrash_stripped.elf | \
+		sed 's/rocrash_stripped_elf/rocrash_elf/g; s/^unsigned char/const unsigned char/' > rocrashelf.c
+$(BUILD)/rocrashelf.o: $(BUILD)/rocrashelf.c
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -87,4 +87,7 @@ void         elf_dump(const void *image, uint32_t size);   /* print the headers 
 int          elf_load(const void *image, uint32_t size, uint32_t lo, uint32_t hi,
                       uint32_t *entry_out);
 
+/* After loading, make read-only segments actually read-only to ring 3. */
+void         elf_protect(const void *image);
+
 #endif
