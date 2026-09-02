@@ -232,6 +232,52 @@ static void execute(const char *cmd)
             kprint("  both spaces freed, frames free now ");
             kprint_dec(pmm_free_frames()); kprint("\n");
         }
+    } else if (streq(cmd, "cow")) {
+        /* Fork one parent three times without any child writing, so all four
+           processes share the single data page. This shows the reference count
+           is a real counter, not a shared/private flag: one frame, four owners,
+           and freeing three of them drops it back to one rather than to zero. */
+        uint32_t v = 0x00900000;
+        uint32_t free0 = pmm_free_frames();
+
+        proc_t *par = proc_alloc("cowdemo");
+        if (!par) {
+            kprint_color("  process table full\n", COLOR_RED_ON_BLACK);
+        } else {
+            par->dir = vmm_create_dir();
+            vmm_map_alloc(par->dir, v, PF_PRESENT | PF_RW);
+            proc_switch_to(par->pid);
+            *(volatile uint32_t *)v = 0x5A5A5A5A;
+            uint32_t frame = vmm_translate(par->dir, v) & ~0xFFFu;
+
+            int kids[3];
+            for (int i = 0; i < 3; i++)
+                kids[i] = proc_fork();      /* parent stays current, so all
+                                               three are clones of the parent */
+
+            kprint("  one page at "); kprint_hex(v);
+            kprint(", shared by parent + 3 children: ");
+            kprint_dec(pmm_refcount(frame)); kprint(" owners\n");
+            kprint("  frames used by all four: ");
+            kprint_dec(free0 - pmm_free_frames()); kprint("\n");
+
+            for (int i = 0; i < 3; i++) {
+                proc_switch_to(kids[i]);
+                proc_exit(0);               /* child exits without ever writing */
+            }
+            kprint("  after 3 children exit, the page has ");
+            kprint_dec(pmm_refcount(frame)); kprint(" owner\n");
+
+            proc_switch_to(par->pid);
+            for (int i = 0; i < 3; i++)
+                proc_wait(0);               /* reap the three zombies */
+            proc_exit(0);
+            proc_wait(0);                   /* kernel reaps the parent orphan */
+
+            kprint("  frames free: "); kprint_dec(free0);
+            kprint(" before, "); kprint_dec(pmm_free_frames()); kprint(" after\n");
+        }
+
     } else if (streq(cmd, "fork")) {
         /* Build a parent process with one page of private memory, fork it, and
            show that the child starts with the parent's data but diverges the
