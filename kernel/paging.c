@@ -81,3 +81,42 @@ void paging_install(void)
     cr0 |= 0x80000000;
     __asm__ volatile("mov %0, %%cr0" :: "r"(cr0));
 }
+
+/* ----------------------------------------------------------------------------
+ *  paging_set_user_writable: flip the writable bit on user-zone pages.
+ *
+ *  The ELF loader now honours segment permissions. A segment the linker marked
+ *  read-only (code, constants) should fault if the program writes to it, which
+ *  turns a stray pointer into a clean kill instead of silent corruption. The
+ *  user zone is inside the shared identity map, and only one user program runs
+ *  at a time, so the permission simply lives in first_page_table and is reset
+ *  when the next program loads.
+ *
+ *  Marking a page read-only in ring 3 means clearing PAGE_RW: on x86 a
+ *  supervisor-writable page is still writable to the kernel, but a ring-3 store
+ *  to a page without RW faults. Range is clamped to the user zone so this can
+ *  never touch kernel mappings.
+ * --------------------------------------------------------------------------*/
+void paging_set_user_writable(uint32_t addr, uint32_t len, int writable)
+{
+    uint32_t start = addr & ~0xFFFu;
+    uint32_t end   = (addr + len + 0xFFFu) & ~0xFFFu;
+    if (start < USER_ZONE_START) start = USER_ZONE_START;
+    if (end   > USER_ZONE_END)   end   = USER_ZONE_END;
+
+    for (uint32_t a = start; a < end; a += 0x1000) {
+        uint32_t i = a >> 12;                    /* index into the 0-4MB table */
+        uint32_t e = first_page_table[i] & ~PAGE_RW;
+        if (writable)
+            e |= PAGE_RW;
+        first_page_table[i] = e;
+        __asm__ volatile("invlpg (%0)" :: "r"(a) : "memory");
+    }
+}
+
+/* Restore the whole user zone to writable, the default a freshly loaded program
+   starts from before its segment permissions are applied. */
+void paging_reset_user_zone(void)
+{
+    paging_set_user_writable(USER_ZONE_START, USER_ZONE_END - USER_ZONE_START, 1);
+}
