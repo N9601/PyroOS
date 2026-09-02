@@ -7,6 +7,7 @@
 #include "screen.h"
 #include "context.h"
 #include "demand.h"
+#include "vmm.h"
 
 /* The 48 stubs from interrupt.asm. */
 extern void isr0(void);  extern void isr1(void);  extern void isr2(void);  extern void isr3(void);
@@ -138,6 +139,10 @@ void isr_handler(registers_t *r)
         uint32_t fault_addr;
         __asm__ volatile("mov %%cr2, %0" : "=r"(fault_addr));
         if (demand_handle(fault_addr, r->err_code))
+            return;
+        /* Or the address is a copy-on-write page the process just wrote to,
+           in which case give it a private copy and resume. */
+        if (vmm_cow_handle(fault_addr, r->err_code))
             return;
     }
 

@@ -30,6 +30,7 @@ uint32_t    vmm_translate(page_dir_t dir, uint32_t virt);   /* 0 if unmapped */
 void        vmm_unmap(page_dir_t dir, uint32_t virt);
 page_dir_t  vmm_clone_dir(page_dir_t src);     /* eager deep copy */
 page_dir_t  vmm_clone_cow(page_dir_t src);     /* copy-on-write clone */
+int         vmm_cow_handle(uint32_t fault_addr, uint32_t err_code);  /* split on write */
 uint32_t    vmm_dir_frames(page_dir_t dir);    /* private frames it holds */
 void        vmm_flush(uint32_t virt);
 

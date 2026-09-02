@@ -278,3 +278,59 @@ page_dir_t vmm_clone_cow(page_dir_t src)
     }
     return dst;
 }
+
+/* ----------------------------------------------------------------------------
+ *  vmm_cow_handle: resolve a write fault on a copy-on-write page.
+ *
+ *  Called from the page-fault handler before it treats the fault as an error.
+ *  A write to a PF_COW page means: the writer wants a private copy. If the
+ *  frame has only one owner left, no copy is needed and it is simply made
+ *  writable again. Otherwise a fresh frame is allocated, the page copied into
+ *  it, the writer's entry pointed at the copy, and the shared frame's count
+ *  dropped. Either way the faulting instruction re-runs and succeeds.
+ *
+ *  Returns 1 if it handled the fault, 0 if this was not a COW page and the
+ *  fault is a real one for someone else to report.
+ * --------------------------------------------------------------------------*/
+static page_dir_t active_dir(void)
+{
+    uint32_t cr3;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
+    return (page_dir_t)FRAME_OF(cr3);
+}
+
+int vmm_cow_handle(uint32_t fault_addr, uint32_t err_code)
+{
+    if (!(err_code & 0x2))              /* not a write: not our fault to fix */
+        return 0;
+
+    page_dir_t dir = active_dir();
+    uint32_t di = DIR_INDEX(fault_addr);
+    if (!(dir[di] & PF_PRESENT))
+        return 0;
+
+    uint32_t *tab = (uint32_t *)FRAME_OF(dir[di]);
+    uint32_t ti = TAB_INDEX(fault_addr);
+    uint32_t e = tab[ti];
+    if (!(e & PF_PRESENT) || !(e & PF_COW))
+        return 0;                       /* present and writable-by-fault, but
+                                           not copy-on-write: a real violation */
+
+    uint32_t frame = FRAME_OF(e);
+    uint32_t flags = (e & 0xFFF & ~PF_COW) | PF_RW;
+
+    if (pmm_refcount(frame) <= 1) {
+        /* The last owner. No copy needed: reclaim write permission in place. */
+        tab[ti] = frame | flags;
+    } else {
+        /* Still shared. Give the writer a private duplicate. */
+        uint32_t fresh = pmm_alloc();
+        if (!fresh)
+            return 0;                   /* out of memory: let it fault for real */
+        memcpy((void *)fresh, (void *)frame, PAGE_SIZE);
+        pmm_free(frame);                /* drop this owner's share */
+        tab[ti] = fresh | flags;
+    }
+    vmm_flush(fault_addr);
+    return 1;
+}
