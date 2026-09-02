@@ -29,22 +29,27 @@ copy-on-write, isolating processes through the MMU.
 Keywords: virtual memory, MMU, paging, demand paging, copy-on-write, page fault
 handler, memory isolation, TLB.
 
-### M21. POSIX-style process model (parts 1 and 2 done)
+### M21. POSIX-style process model (done)
 A UNIX-style process model with fork, exec, and wait, a full ELF binary loader,
 argument passing, and process lifecycle management.
 Keywords: POSIX, process management, fork, exec, ELF loader, system calls, ABI,
 inter-process communication.
 
-Done so far: the process table, address-space cloning, and the fork/exit/wait
-lifecycle with zombie reaping and orphan re-parenting. Then an ELF32 loader with
-bounds-checked headers, exec running real ELF binaries while flat binaries keep
-working, and argc/argv built on the user stack.
+Built: the process table; fork by copy-on-write address-space cloning; exit and
+wait with zombie reaping and orphan re-parenting; an ELF32 loader with
+bounds-checked headers that runs real ELF binaries while flat binaries keep
+working; argc/argv on the user stack; enforced per-segment page permissions
+(a read-only segment faults on write); reference-counted physical frames; and
+SYS_GETPID, with exec running each program as a tracked process.
 
-Still to come: exposing fork, exit and wait to ring 3 through int 0x80, which
-needs the syscall trap frame saved in the PCB so a forked child can be resumed
-in user mode; per-segment page permissions, so a read-only segment is actually
-mapped read-only instead of merely being labelled that way; and copy-on-write
-instead of the current eager page copy.
+Copy-on-write required turning on CR0.WP so the kernel itself obeys read-only
+page permissions, without which a supervisor write splits nothing.
+
+One stretch item remains, folded into M22-era work: exposing fork itself to
+ring 3 through int 0x80. That needs the syscall trap frame saved in the PCB so a
+forked child can be resumed in user mode with eax set to 0. The kernel-side
+fork, exec, wait and getpid are all in place; what is missing is a ring-3
+program calling fork and both halves returning to user mode.
 
 ### M22. Virtual File System and a real on-disk filesystem
 A Virtual File System layer over a FAT32 or ext2 driver, with a block buffer

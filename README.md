@@ -4,7 +4,7 @@
 
 # PyroOS
 
-![Milestones](https://img.shields.io/badge/Milestones-22-e07a25?style=flat-square)
+![Milestones](https://img.shields.io/badge/Milestones-23-e07a25?style=flat-square)
 ![Language](https://img.shields.io/badge/C-freestanding-00599C?style=flat-square&logo=c&logoColor=white)
 ![Assembly](https://img.shields.io/badge/Assembly-NASM-6E4C13?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-x86%2032--bit-5b6b8a?style=flat-square)
@@ -53,6 +53,9 @@ pyro> write hello world
 pyro> cat hello
 pyro> ls
 pyro> exec prog.elf hello tarang
+pyro> exec whoami
+pyro> exec rocrash
+pyro> cow
 pyro> elfinfo prog.elf
 pyro> exec ask
 pyro> exec calc
@@ -119,6 +122,9 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 - `int 0x80` syscalls: write, read, uptime, sleep, rand, fwrite, fread, exit
 - Real ELF32 loader: segment loading, .bss zeroing, bounds-checked headers
 - argc and argv passed on the user stack, flat binaries still supported
+- Enforced ELF segment permissions: a write to read-only code faults
+- Copy-on-write fork: shared pages, reference-counted frames, split on write
+- SYS_GETPID and process-tracked exec: a program can ask its own pid
 - Loads and runs separately-compiled programs from disk
 - Apps: a calculator, a guessing game, and a note editor that saves files
 - User/supervisor memory protection, with syscall pointer validation
@@ -151,6 +157,7 @@ cat <f>       print a file               ticks     timer ticks since boot
 mem           test the heap allocator    reboot    restart the machine
 vm            address spaces, demand paging  ps    list the process table
 fork          fork, exit and wait between two processes
+cow           one page shared by four processes (copy-on-write)
 elfinfo <f>   parse and validate a program as ELF
 ```
 
@@ -233,8 +240,8 @@ PyroOS/
 │   ├── vmm.c            Page directories, mapping, address spaces
 │   ├── demand.c         Demand paging on the page-fault path
 │   ├── proc.c           Process table, fork, exit and wait
-│   ├── elf.c            ELF32 validation and segment loading
 │   ├── args.c           argc/argv construction on the user stack
+│   ├── elf.c            ELF32 validation, loading, and segment protection
 │   ├── kheap.c          Kernel heap (kmalloc / kfree)
 │   ├── ata.c            ATA PIO disk driver
 │   ├── fs.c             PyroFS filesystem
@@ -284,6 +291,7 @@ PyroOS/
 20. Per-process virtual address spaces, frame allocator and demand paging. (done)
 21. Process model: a process table, fork by address-space cloning, exit and wait. (done)
 22. ELF loader: real ELF32 binaries, segment loading, and argc/argv. (done)
+23. Segment protection, copy-on-write fork, frame refcounts, and getpid. (done)
 
 The larger subsystems planned next (per-process virtual memory, a POSIX process
 model, a VFS with FAT32/ext2, PCI and device drivers, a TCP/IP stack, a graphical
@@ -299,7 +307,7 @@ MIT. See [LICENSE](./LICENSE).
 
 <div align="center">
 
-**22 milestones.** From a 512-byte boot sector to loading real ELF binaries.
+**23 milestones.** From a 512-byte boot sector to copy-on-write fork.
 Built from scratch in x86 assembly and freestanding C.
 
 </div>
