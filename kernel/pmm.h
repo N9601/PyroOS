@@ -18,5 +18,7 @@ void     pmm_free(uint32_t phys);           /* give a frame back */
 uint32_t pmm_total_frames(void);
 uint32_t pmm_used_frames(void);
 uint32_t pmm_free_frames(void);
+void     pmm_incref(uint32_t phys);          /* share an existing frame (COW) */
+uint32_t pmm_refcount(uint32_t phys);        /* how many owners a frame has */
 
 #endif
