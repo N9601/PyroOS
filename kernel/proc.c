@@ -222,3 +222,32 @@ int proc_switch_to(int pid)
     vmm_switch(p->dir);                     /* the actual change of world */
     return 0;
 }
+
+/* ----------------------------------------------------------------------------
+ *  proc_begin_user / proc_end_user: give a ring-3 run a process identity.
+ *
+ *  exec runs a program in the shared user zone rather than a private address
+ *  space, so there is no new page directory to switch to. But the program
+ *  should still be a process: it should have a pid, appear in the table while
+ *  it runs, and be its own parent's child. These wrap a run in exactly that.
+ *
+ *  The process shares the kernel directory (dir = kernel_dir), so proc_free
+ *  will not try to tear down an address space that is not its to free.
+ * --------------------------------------------------------------------------*/
+int proc_begin_user(const char *name)
+{
+    proc_t *p = proc_alloc(name);
+    if (!p)
+        return -1;
+    p->dir = vmm_kernel_dir();      /* shares the user zone, owns nothing */
+    proc_switch_to(p->pid);         /* it becomes the running process */
+    return p->pid;
+}
+
+void proc_end_user(int pid)
+{
+    proc_switch_to(0);              /* the kernel is running again */
+    proc_t *p = proc_get(pid);
+    if (p)
+        proc_free(p);
+}

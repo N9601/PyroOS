@@ -49,4 +49,7 @@ void proc_exit(int code);       /* mark the current process a zombie */
 int  proc_wait(int *status);    /* reap one finished child; its pid or -1 */
 int  proc_switch_to(int pid);   /* make pid current and load its address space */
 
+int  proc_begin_user(const char *name);  /* wrap a ring-3 run in a process identity */
+void proc_end_user(int pid);
+
 #endif

@@ -330,7 +330,11 @@ static void execute(const char *cmd)
         uint32_t size = 0;
         if (fs_read(name, img, sizeof(img), &size) != 0 || size == 0) {
             kprint_color("  no such program\n", COLOR_RED_ON_BLACK);
-        } else if (elf_validate(img, size) == ELF_OK) {
+        } else {
+        /* Everything below runs under a process of its own: it gets a pid,
+           shows up in ps while it runs, and is reaped when it returns. */
+        int upid = proc_begin_user(name);
+        if (elf_validate(img, size) == ELF_OK) {
             uint32_t entry = 0;
             paging_reset_user_zone();   /* start from all-writable */
             int rc = elf_load(img, size, USER_LOAD_ADDR, USER_STACK_TOP, &entry);
@@ -339,7 +343,8 @@ static void execute(const char *cmd)
                 kprint(rc == -2 ? "a segment lies outside the user zone\n"
                                 : "the entry point lies outside the user zone\n");
             } else {
-                kprint("  loaded "); kprint(name); kprint(" as ELF, entry ");
+                kprint("  loaded "); kprint(name); kprint(" as ELF (pid ");
+                kprint_dec((uint32_t)upid); kprint("), entry ");
                 kprint_hex(entry); kprint(", running in ring 3:\n");
                 elf_protect(img);   /* read-only segments now fault on write */
                 /* Hand the program its own command line. args_build writes
@@ -358,6 +363,8 @@ static void execute(const char *cmd)
             kprint("  loaded "); kprint(name); kprint(" as a flat binary (");
             kprint_dec(size); kprint(" bytes), running in ring 3:\n");
             run_user_at(USER_LOAD_ADDR);
+        }
+        proc_end_user(upid);            /* reap the process, back to the kernel */
         }
 
     } else if (starts_with(cmd, "elfinfo ")) {
