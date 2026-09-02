@@ -136,11 +136,17 @@ int proc_fork(void)
 
     /* The child gets its own copy of the parent's memory. Same contents, same
        virtual addresses, different physical frames. */
-    child->dir = vmm_clone_dir(parent->dir);
+    child->dir = vmm_clone_cow(parent->dir);   /* share pages, split on write */
     if (!child->dir) {
         child->state = PROC_UNUSED;         /* nothing was allocated to free */
         return -1;
     }
+
+    /* The clone made the parent's own pages read-only too. If the parent is
+       the running process, its stale writable TLB entries must go, or its next
+       write would slip past the copy-on-write trap. */
+    if (parent == proc_current())
+        vmm_switch(parent->dir);
 
     child->ppid  = parent->pid;
     child->entry = parent->entry;

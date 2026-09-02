@@ -25,8 +25,6 @@
 #include "elf.h"
 #include "args.h"
 #include "paging.h"
-#include "args.h"
-#include "paging.h"
 #include "context.h"
 #include "logo.h"
 
@@ -253,20 +251,29 @@ static void execute(const char *cmd)
             kprint(" wrote "); kprint_hex(*(volatile uint32_t *)v);
             kprint(" at "); kprint_hex(v); kprint("\n");
 
+            uint32_t before_fork = pmm_free_frames();
             int kid = proc_fork();            /* the parent is current, so it forks */
             if (kid < 0) {
                 kprint_color("  fork failed\n", COLOR_RED_ON_BLACK);
             } else {
                 kprint("  forked child pid "); kprint_dec((uint32_t)kid);
-                kprint(", it holds "); kprint_dec(vmm_dir_frames(proc_get(kid)->dir));
-                kprint(" private frames\n");
+                kprint(", cost "); kprint_dec(before_fork - pmm_free_frames());
+                kprint(" frames (page tables only, data page shared)\n");
 
+                /* The parent's data frame is now held by two address spaces. */
+                uint32_t shared = vmm_translate(par->dir, v) & ~0xFFFu;
+                kprint("  data page at "); kprint_hex(v);
+                kprint(" has "); kprint_dec(pmm_refcount(shared));
+                kprint(" owners (copy-on-write)\n");
+
+                uint32_t before_write = pmm_free_frames();
                 proc_switch_to(kid);
                 kprint("  child sees "); kprint_hex(*(volatile uint32_t *)v);
-                kprint(" (inherited)\n");
-                *(volatile uint32_t *)v = 0x2222BBBB;
-                kprint("  child overwrote it with ");
-                kprint_hex(*(volatile uint32_t *)v); kprint("\n");
+                kprint(" (inherited, no copy made)\n");
+                *(volatile uint32_t *)v = 0x2222BBBB;   /* triggers the COW split */
+                kprint("  child wrote "); kprint_hex(*(volatile uint32_t *)v);
+                kprint(", split cost "); kprint_dec(before_write - pmm_free_frames());
+                kprint(" frame\n");
                 proc_exit(7);                 /* child dies, becomes a zombie */
 
                 proc_switch_to(par->pid);

@@ -75,10 +75,16 @@ void paging_install(void)
     /* Load the directory address into CR3. */
     __asm__ volatile("mov %0, %%cr3" :: "r"(page_directory));
 
-    /* Set CR0 bit 31 (PG) to enable paging. */
+    /* Set two CR0 bits together:
+         bit 31 (PG) turns paging on.
+         bit 16 (WP) makes the kernel itself obey read-only page permissions.
+       Without WP, ring 0 may write straight through a read-only page and the
+       hardware never faults. That quietly defeats copy-on-write whenever the
+       writer is the kernel: the shared page is modified in place and every
+       address space mapping it sees the change. Linux sets WP for this reason. */
     uint32_t cr0;
     __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
-    cr0 |= 0x80000000;
+    cr0 |= 0x80010000;              /* PG | WP */
     __asm__ volatile("mov %0, %%cr0" :: "r"(cr0));
 }
 
