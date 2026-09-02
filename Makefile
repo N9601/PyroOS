@@ -35,7 +35,7 @@ ASM_OBJ := $(BUILD)/kernel_entry.o $(BUILD)/interrupt.o $(BUILD)/switch.o $(BUIL
 # the kernel can write them into the filesystem at boot.
 EMBED_OBJ := $(BUILD)/userprog.o $(BUILD)/crashprog.o $(BUILD)/askprog.o \
              $(BUILD)/calcprog.o $(BUILD)/guessprog.o $(BUILD)/noteprog.o \
-             $(BUILD)/progelf.o $(BUILD)/rocrashelf.o
+             $(BUILD)/progelf.o $(BUILD)/rocrashelf.o $(BUILD)/whoamielf.o
 
 .PHONY: all run clean
 
@@ -213,4 +213,18 @@ $(BUILD)/rocrashelf.c: $(BUILD)/rocrash_stripped.elf
 	cd $(BUILD) && xxd -i rocrash_stripped.elf | \
 		sed 's/rocrash_stripped_elf/rocrash_elf/g; s/^unsigned char/const unsigned char/' > rocrashelf.c
 $(BUILD)/rocrashelf.o: $(BUILD)/rocrashelf.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# --- whoami: asks the kernel for its pid via SYS_GETPID, embedded as ELF ---
+$(BUILD)/whoami.o: user/whoami.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD)/whoami.elf: $(BUILD)/whoami.o user/prog.ld
+	ld -m elf_i386 -z noexecstack -T user/prog.ld -o $@ $(BUILD)/whoami.o
+$(BUILD)/whoami_stripped.elf: $(BUILD)/whoami.elf
+	objcopy --strip-all $< $@
+$(BUILD)/whoamielf.c: $(BUILD)/whoami_stripped.elf
+	cd $(BUILD) && xxd -i whoami_stripped.elf | \
+		sed 's/whoami_stripped_elf/whoami_elf/g; s/^unsigned char/const unsigned char/' > whoamielf.c
+$(BUILD)/whoamielf.o: $(BUILD)/whoamielf.c
 	$(CC) $(CFLAGS) -c $< -o $@

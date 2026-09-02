@@ -16,6 +16,7 @@
 #include "keyboard.h"
 #include "usermode.h"
 #include "fs.h"
+#include "proc.h"
 
 /* A pointer passed from ring 3 must lie inside the user zone (0x80000 to
    0xFFFFF). This stops a program from tricking the kernel into reading or
@@ -36,6 +37,9 @@ void syscall_handler(registers_t *r)
         break;
     case SYS_UPTIME:
         r->eax = timer_ticks();
+        break;
+    case SYS_GETPID:
+        r->eax = (uint32_t)proc_current()->pid;
         break;
     case SYS_EXIT:
         user_exit();                /* unwind back to the kernel; never returns */

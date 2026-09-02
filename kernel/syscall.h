@@ -13,6 +13,7 @@
 #define SYS_RAND    5    /* returns a pseudo-random number 0..32767 in eax */
 #define SYS_FWRITE  6    /* ebx=name, ecx=data, edx=length; write a file. eax=0 or -1 */
 #define SYS_FREAD   7    /* ebx=name, ecx=buffer, edx=max; read a file. eax=bytes or -1 */
+#define SYS_GETPID  8    /* returns the caller process id in eax */
 
 void syscall_install(void);   /* register the int 0x80 gate */
 

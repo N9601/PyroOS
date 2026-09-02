@@ -62,6 +62,9 @@ void kmain(void)
     extern const unsigned char rocrash_elf[];
     extern unsigned int rocrash_elf_len;
     fs_write("rocrash", rocrash_elf, rocrash_elf_len);
+    extern const unsigned char whoami_elf[];
+    extern unsigned int whoami_elf_len;
+    fs_write("whoami", whoami_elf, whoami_elf_len);
 
     kprint("Subsystems: interrupts, paging, heap, timer, keyboard, fs.\n");
 
