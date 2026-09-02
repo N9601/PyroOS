@@ -218,3 +218,63 @@ uint32_t vmm_dir_frames(page_dir_t dir)
     }
     return n;
 }
+
+/* ----------------------------------------------------------------------------
+ *  vmm_clone_cow: a copy-on-write clone of an address space.
+ *
+ *  Where vmm_clone_dir duplicates every data frame up front, this shares them.
+ *  Parent and child point at the same physical pages, both marked read-only and
+ *  tagged copy-on-write, and the frame's reference count is bumped. Nothing is
+ *  copied until someone writes: the write faults, the fault handler makes a
+ *  private copy for the writer, and the two diverge one page at a time.
+ *
+ *  Page tables are still copied, not shared. Two processes must be able to hold
+ *  different permissions for the same page (that is the whole mechanism), and
+ *  permissions live in the page-table entry, so the entries cannot be shared
+ *  even though the frames they point at are.
+ *
+ *  The parent's own entries are made read-only too. If only the child's were,
+ *  the parent could write the shared page and the child would see the change,
+ *  which is exactly the isolation COW exists to prevent.
+ * --------------------------------------------------------------------------*/
+page_dir_t vmm_clone_cow(page_dir_t src)
+{
+    if (!src)
+        return 0;
+
+    page_dir_t dst = vmm_create_dir();      /* shares kernel entries 0 and 1 */
+    if (!dst)
+        return 0;
+
+    for (uint32_t di = 2; di < 1024; di++) {
+        if (!(src[di] & PF_PRESENT))
+            continue;
+
+        uint32_t tab_phys = pmm_alloc();
+        if (!tab_phys) {
+            vmm_destroy_dir(dst);
+            return 0;
+        }
+        uint32_t *src_tab = (uint32_t *)FRAME_OF(src[di]);
+        uint32_t *dst_tab = (uint32_t *)tab_phys;
+        memset(dst_tab, 0, PAGE_SIZE);
+        dst[di] = tab_phys | (src[di] & 0xFFF);
+
+        for (uint32_t ti = 0; ti < 1024; ti++) {
+            uint32_t e = src_tab[ti];
+            if (!(e & PF_PRESENT))
+                continue;
+
+            uint32_t frame = FRAME_OF(e);
+
+            /* Drop write permission, tag as copy-on-write, on both sides. A
+               page that was already read-only stays read-only and is simply
+               shared; there is nothing to copy on a write that cannot happen. */
+            uint32_t shared = (e & ~PF_RW) | (e & PF_RW ? PF_COW : 0);
+            src_tab[ti] = shared;
+            dst_tab[ti] = shared;
+            pmm_incref(frame);          /* now held by two address spaces */
+        }
+    }
+    return dst;
+}
