@@ -41,6 +41,26 @@ void syscall_handler(registers_t *r)
     case SYS_GETPID:
         r->eax = (uint32_t)proc_current()->pid;
         break;
+    case SYS_SBRK: {
+        /* Grow the process heap by ebx bytes and return the OLD break, which is
+           where the freshly granted region begins. This mirrors UNIX sbrk: the
+           caller gets a pointer to memory it did not have a moment ago. The
+           memory itself already exists (the user zone is identity-mapped), so
+           this only moves and bounds-checks the break. Returns -1 if the growth
+           would run past the end of the heap, leaving the break untouched. */
+        proc_t *p = proc_current();
+        uint32_t old = p->brk ? p->brk : USER_HEAP_BASE;
+        uint32_t want = old + r->ebx;
+        if (r->ebx == 0) {
+            r->eax = old;               /* sbrk(0) queries the current break */
+        } else if (want < old || want > USER_HEAP_END) {
+            r->eax = (uint32_t)-1;      /* overflow or out of heap */
+        } else {
+            p->brk = want;
+            r->eax = old;
+        }
+        break;
+    }
     case SYS_EXIT:
         user_exit();                /* unwind back to the kernel; never returns */
         break;

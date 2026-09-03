@@ -19,4 +19,12 @@ void user_exit(void);          /* called by SYS_EXIT to unwind back to kernel */
    with USER_LOAD_ADDR this bounds the region a program may occupy. */
 #define USER_STACK_TOP 0x000F0000u
 
+/* The user heap: a slice of the already-mapped user zone between the program
+   image (near USER_LOAD_ADDR) and the stack (below USER_STACK_TOP). Because the
+   whole zone is identity-mapped and present, sbrk hands out addresses that are
+   already backed by RAM; it only has to track the break and refuse to run past
+   the end. 256 KB, clear of both code and stack. */
+#define USER_HEAP_BASE 0x000A0000u
+#define USER_HEAP_END  0x000E0000u
+
 #endif

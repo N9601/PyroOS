@@ -9,6 +9,7 @@
  *  freed, and is the parent of anything started from the shell.
  * ==========================================================================*/
 #include "proc.h"
+#include "usermode.h"
 #include "pmm.h"
 #include "screen.h"
 #include "string.h"
@@ -240,6 +241,7 @@ int proc_begin_user(const char *name)
     if (!p)
         return -1;
     p->dir = vmm_kernel_dir();      /* shares the user zone, owns nothing */
+    p->brk = USER_HEAP_BASE;        /* an empty heap, ready for sbrk */
     proc_switch_to(p->pid);         /* it becomes the running process */
     return p->pid;
 }
