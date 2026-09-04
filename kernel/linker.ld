@@ -5,9 +5,9 @@
  *  them into one image. This script controls that layout.
  *
  *  Two critical decisions:
- *    1. ". = 0x1000" sets the starting address. Every absolute address the
+ *    1. ". = 0x10000" sets the starting address. Every absolute address the
  *       compiler bakes in (string locations, function calls) is computed as
- *       if the kernel lives at 0x1000 -- which is exactly where the boot
+ *       if the kernel lives at 0x10000 -- which is exactly where the boot
  *       sector loads it. If these disagreed, the kernel would jump to wrong
  *       addresses and crash.
  *    2. We list kernel_entry's code first inside .text so the _start stub is

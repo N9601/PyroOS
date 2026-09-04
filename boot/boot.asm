@@ -81,7 +81,7 @@ BEGIN_PM:
     mov ebx, MSG_PROT_MODE
     call print_pm           ; write straight to VGA memory at 0xB8000
 
-    call KERNEL_OFFSET      ; jump into the kernel we loaded at 0x1000. Its
+    call KERNEL_OFFSET      ; jump into the kernel we loaded at 0x10000. Its
                             ; first byte is the _start stub, which calls kmain.
 
     jmp $                   ; if the kernel returns, halt here
