@@ -20,7 +20,9 @@ KERNEL_SECTORS equ 120      ; how many 512-byte sectors of kernel to load
                             ; reads are limited to 127 sectors per call, and
                             ; asking for more just fails. Too small is worse:
                             ; the kernel truncates silently, which looks like
-                            ; missing code rather than a clean error.
+                            ; missing code rather than a clean error. The link
+                            ; step checks the kernel against this value
+                            ; (kernel/linker.ld), so change both together.
 
 start:
     mov [BOOT_DRIVE], dl     ; save BIOS boot drive for later use

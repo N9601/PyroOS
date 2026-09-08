@@ -33,6 +33,7 @@ SECTIONS
     .data : {
         *(.data)                /* initialized global/static data */
     }
+    image_end = .;              /* objcopy's flat binary stops here */
 
     .bss : {
         bss_start = .;          /* entry stub zeroes the range [bss_start,bss_end) */
@@ -49,3 +50,14 @@ SECTIONS
         *(.eh_frame)
     }
 }
+
+/* The boot sector loads exactly KERNEL_SECTORS (boot/boot.asm) sectors. A
+   bigger kernel is not an error at boot, it is silently cut short, which shows
+   up much later as missing code or corrupt data. Refuse to link one instead.
+   120 must match KERNEL_SECTORS. */
+ASSERT(image_end - 0x10000 <= 120 * 512,
+       "kernel image exceeds KERNEL_SECTORS; raise it in boot/boot.asm and here")
+
+/* Everything the kernel owns, .bss included, must end below the user zone at
+   0x80000, which ring 3 can read and write. */
+ASSERT(bss_end <= 0x80000, "kernel .bss runs into the user zone at 0x80000")
