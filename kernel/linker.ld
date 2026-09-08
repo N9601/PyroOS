@@ -40,4 +40,12 @@ SECTIONS
         *(COMMON)               /* zero-initialized data */
         bss_end = .;
     }
+
+    /* gcc emits .eh_frame unwind tables by default. They are only read by a
+       C++ exception unwinder or a debugger walking the stack, and the kernel
+       has neither, so keeping them would spend about 5 KB of the boot
+       loader's KERNEL_SECTORS budget on bytes nothing ever reads. */
+    /DISCARD/ : {
+        *(.eh_frame)
+    }
 }
