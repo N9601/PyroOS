@@ -194,7 +194,7 @@ From power-on to the shell, each layer built on the one below it.
                         +------------------------------------+
 ```
 
-Memory map: boot sector at `0x7C00`, kernel at `0x10000`, protected-mode stack at `0x90000`, kernel heap from `0x100000` to `0x400000`, VGA text memory at `0xB8000`.
+Memory map: boot sector at `0x7C00`, kernel at `0x10000` (its 16 KB stack lives in its own `.bss`), ring-3 user zone from `0x80000` to `0xFFFFF`, kernel heap from `0x100000` to `0x400000`, VGA text memory at `0xB8000`.
 
 ---
 
