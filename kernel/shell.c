@@ -404,7 +404,10 @@ static void execute(const char *cmd)
             }
         } else {
             /* A flat binary: no headers, so the old contract still applies.
-               It was linked to run at USER_LOAD_ADDR and starts at byte zero. */
+               It was linked to run at USER_LOAD_ADDR and starts at byte zero.
+               The last ELF may have left read-only pages there, and with
+               CR0.WP set the kernel's own copy would fault on them. */
+            paging_reset_user_zone();
             memcpy((void *)USER_LOAD_ADDR, img, size);
             kprint("  loaded "); kprint(name); kprint(" as a flat binary (");
             kprint_dec(size); kprint(" bytes), running in ring 3:\n");

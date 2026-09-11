@@ -14,6 +14,7 @@
 #include "screen.h"
 #include "context.h"
 #include "isr.h"
+#include "paging.h"
 #include "string.h"
 
 #include <stdint.h>
@@ -67,6 +68,7 @@ void run_user_at_sp(uint32_t entry, uint32_t esp)
    now, so ring-3 code must live in the user zone.) */
 void run_user_program(void)
 {
+    paging_reset_user_zone();       /* clear any read-only pages an ELF left */
     memcpy((void *)USER_LOAD_ADDR, user_prog, user_prog_len);
     run_user_at(USER_LOAD_ADDR);
 }

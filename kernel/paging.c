@@ -98,10 +98,12 @@ void paging_install(void)
  *  at a time, so the permission simply lives in first_page_table and is reset
  *  when the next program loads.
  *
- *  Marking a page read-only in ring 3 means clearing PAGE_RW: on x86 a
- *  supervisor-writable page is still writable to the kernel, but a ring-3 store
- *  to a page without RW faults. Range is clamped to the user zone so this can
- *  never touch kernel mappings.
+ *  Marking a page read-only means clearing PAGE_RW. Because paging_install
+ *  sets CR0.WP, that binds the kernel as well as ring 3: a supervisor store to
+ *  such a page faults too. So every kernel write into the user zone (a program
+ *  image, its argument block) has to happen after paging_reset_user_zone and
+ *  before the next program's permissions are applied. Range is clamped to the
+ *  user zone so this can never touch kernel mappings.
  * --------------------------------------------------------------------------*/
 void paging_set_user_writable(uint32_t addr, uint32_t len, int writable)
 {
