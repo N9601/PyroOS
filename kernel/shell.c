@@ -411,7 +411,12 @@ static void execute(const char *cmd)
             memcpy((void *)USER_LOAD_ADDR, img, size);
             kprint("  loaded "); kprint(name); kprint(" as a flat binary (");
             kprint_dec(size); kprint(" bytes), running in ring 3:\n");
-            run_user_at(USER_LOAD_ADDR);
+            /* It gets its command line exactly as an ELF does. */
+            uint32_t esp = args_build(tail, USER_STACK_TOP);
+            if (esp)
+                run_user_at_sp(USER_LOAD_ADDR, esp);
+            else
+                run_user_at(USER_LOAD_ADDR);
         }
         proc_end_user(upid);            /* reap the process, back to the kernel */
         }
