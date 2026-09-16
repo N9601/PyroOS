@@ -26,12 +26,37 @@ static int in_user_zone(uint32_t p, uint32_t len)
     return p >= 0x00080000u && (uint64_t)p + len <= 0x00100000u;
 }
 
+/* A string is only safe to read if all of it, terminator included, lies in
+   the user zone. Checking the first byte is not enough: a string that starts
+   inside the zone can run straight on into the kernel heap at 0x100000. */
+static int user_string_ok(uint32_t p)
+{
+    if (!in_user_zone(p, 1))
+        return 0;
+    for (const char *s = (const char *)p; (uint32_t)s < 0x00100000u; s++)
+        if (*s == '\0')
+            return 1;
+    return 0;
+}
+
+/* Did this trap come from ring 3? The kernel itself also uses int 0x80 (the
+   shell's `syscall` command), and its pointers are kernel pointers by design.
+   The low two bits of the saved CS are the privilege level it was running at. */
+static int from_user(const registers_t *r)
+{
+    return (r->cs & 3) == 3;
+}
+
 extern void isr128(void);       /* the int 0x80 stub in interrupt.asm */
 
 void syscall_handler(registers_t *r)
 {
     switch (r->eax) {
     case SYS_WRITE:
+        if (from_user(r) && !user_string_ok(r->ebx)) {
+            r->eax = (uint32_t)-1;      /* would read kernel memory */
+            break;
+        }
         kprint((const char *)r->ebx);
         r->eax = 0;
         break;
@@ -93,7 +118,7 @@ void syscall_handler(registers_t *r)
     }
     case SYS_FWRITE: {
         /* ebx=name, ecx=data, edx=length. Validate the user pointers first. */
-        if (in_user_zone(r->ebx, 1) && in_user_zone(r->ecx, r->edx))
+        if (user_string_ok(r->ebx) && in_user_zone(r->ecx, r->edx))
             r->eax = (uint32_t)fs_write((const char *)r->ebx, (const void *)r->ecx, r->edx);
         else
             r->eax = (uint32_t)-1;
@@ -102,7 +127,7 @@ void syscall_handler(registers_t *r)
     case SYS_FREAD: {
         /* ebx=name, ecx=buffer, edx=max. The kernel writes into the buffer, so
            it must be inside the user zone. Returns bytes read, or -1. */
-        if (in_user_zone(r->ebx, 1) && in_user_zone(r->ecx, r->edx)) {
+        if (user_string_ok(r->ebx) && in_user_zone(r->ecx, r->edx)) {
             uint32_t got = 0;
             int rc = fs_read((const char *)r->ebx, (void *)r->ecx, r->edx, &got);
             r->eax = (rc == 0) ? got : (uint32_t)-1;
