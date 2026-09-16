@@ -45,7 +45,9 @@ uint32_t args_build(const char *line, uint32_t stack_top)
         argc++;
     }
 
-    if (argc == 0 || total > ARG_BYTES)
+    /* An empty line is still a valid argument list: argc 0 and an argv that
+       holds only its NULL terminator. Only text that does not fit fails. */
+    if (total > ARG_BYTES)
         return 0;
 
     /* Copy the strings down from the top, remembering where each landed. */

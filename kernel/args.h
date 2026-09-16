@@ -16,7 +16,8 @@
 
 /* Split `line` on spaces and build an argc/argv block on the user stack ending
    at stack_top. Returns the new stack pointer the program should start with,
-   or 0 if the arguments do not fit. */
+   or 0 if the arguments do not fit. An empty line builds an empty list (argc
+   0), which always fits. */
 uint32_t args_build(const char *line, uint32_t stack_top);
 
 #endif

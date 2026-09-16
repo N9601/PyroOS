@@ -10,6 +10,7 @@
  *      unwinds it. Either way PyroOS survives.
  * ==========================================================================*/
 #include "usermode.h"
+#include "args.h"
 #include "syscall.h"
 #include "screen.h"
 #include "context.h"
@@ -38,18 +39,12 @@ void user_exit(void)
    faults, then return. `entry` must point into the user zone.
 
    No arguments still means an argument frame, just an empty one: argc 0 and
-   an argv holding only its NULL terminator, laid out the way args_build lays
-   out a real one. A program written as _start(int argc, char **argv) would
-   otherwise read whatever the previous program left at the top of the stack. */
+   an argv holding only its NULL terminator. A program written as
+   _start(int argc, char **argv) would otherwise read whatever the previous
+   program left at the top of the stack. */
 void run_user_at(uint32_t entry)
 {
-    uint32_t *sp = (uint32_t *)USER_STACK_TOP;
-    *--sp = 0;                      /* argv[0] = NULL, the terminator */
-    uint32_t argv = (uint32_t)sp;
-    *--sp = argv;                   /* the argv argument */
-    *--sp = 0;                      /* the argc argument */
-    *--sp = 0;                      /* fake return address, never used */
-    run_user_at_sp(entry, (uint32_t)sp);
+    run_user_at_sp(entry, args_build("", USER_STACK_TOP));
 }
 
 /* The same, but starting on a stack the caller has already prepared, which is

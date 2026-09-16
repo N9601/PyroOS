@@ -392,15 +392,17 @@ static void execute(const char *cmd)
                 kprint("  loaded "); kprint(name); kprint(" as ELF (pid ");
                 kprint_dec((uint32_t)upid); kprint("), entry ");
                 kprint_hex(entry); kprint(", running in ring 3:\n");
-                elf_protect(img);   /* read-only segments now fault on write */
                 /* Hand the program its own command line. args_build writes
                    the block into the user zone and returns the stack pointer
-                   the program should start on. */
+                   the program should start on. This has to happen before
+                   elf_protect: a segment may share a page with the top of the
+                   stack, and once that page is read-only CR0.WP makes the
+                   kernel's own store fault, with no recovery armed. */
                 uint32_t esp = args_build(tail, USER_STACK_TOP);
-                if (esp)
-                    run_user_at_sp(entry, esp);
-                else
-                    run_user_at(entry);   /* did not fit; run without them */
+                if (!esp)
+                    esp = args_build("", USER_STACK_TOP);   /* did not fit */
+                elf_protect(img);   /* read-only segments now fault on write */
+                run_user_at_sp(entry, esp);
             }
         } else {
             /* A flat binary: no headers, so the old contract still applies.
