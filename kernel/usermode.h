@@ -20,11 +20,17 @@ void user_exit(void);          /* called by SYS_EXIT to unwind back to kernel */
 #define USER_STACK_TOP 0x000F0000u
 
 /* The user heap: a slice of the already-mapped user zone between the program
-   image (near USER_LOAD_ADDR) and the stack (below USER_STACK_TOP). Because the
-   whole zone is identity-mapped and present, sbrk hands out addresses that are
-   already backed by RAM; it only has to track the break and refuse to run past
-   the end. 256 KB, clear of both code and stack. */
-#define USER_HEAP_BASE 0x000A0000u
-#define USER_HEAP_END  0x000E0000u
+   image (near USER_LOAD_ADDR) and the stack (below USER_STACK_TOP). The zone is
+   identity-mapped, so sbrk hands out physical memory as it is; it only has to
+   track the break and refuse to run past the end.
+
+   That only works where the zone is real RAM, which on a PC is conventional
+   memory below 0xA0000. Above it sit the VGA window (0xA0000 to 0xBFFFF, which
+   includes the text screen at 0xB8000) and then option and BIOS ROM: writes
+   there are dropped or land on the screen. So the heap is the 60 KB from
+   0x90000 up to just below the BIOS data area at 0x9FC00, leaving the 64 KB
+   from USER_LOAD_ADDR for the program image. */
+#define USER_HEAP_BASE 0x00090000u
+#define USER_HEAP_END  0x0009F000u
 
 #endif
