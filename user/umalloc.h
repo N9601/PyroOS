@@ -32,6 +32,12 @@ typedef struct u_block {
     u_size_t        size;           /* payload bytes, not counting this header */
     int             free;
     struct u_block *next;
+    u_size_t        pad;            /* rounds the header up to 16 bytes. With
+                                       sizes kept to multiples of 8 and the heap
+                                       starting 8-aligned, that keeps every
+                                       payload 8-byte aligned too; a 12-byte
+                                       header would leave every other one off
+                                       by 4. */
 } u_block_t;
 
 static u_block_t *u_head = 0;       /* first block; the list is address-ordered */
