@@ -38,14 +38,19 @@ static u_block_t *u_head = 0;       /* first block; the list is address-ordered 
 
 #define U_HDR sizeof(u_block_t)
 
-/* Fold a just-freed block into the next one if that is also free. Called after
-   every free, so at most one merge is ever pending. */
+/* Fold every run of adjacent free blocks into one. Called after every free.
+   Freeing a block whose neighbours on both sides are already free needs two
+   merges, so after absorbing its successor a block stays put and is checked
+   against its new successor before the walk moves on. */
 static void u_coalesce(void)
 {
-    for (u_block_t *b = u_head; b && b->next; b = b->next) {
+    u_block_t *b = u_head;
+    while (b && b->next) {
         if (b->free && b->next->free) {
             b->size += U_HDR + b->next->size;
             b->next = b->next->next;
+        } else {
+            b = b->next;
         }
     }
 }
