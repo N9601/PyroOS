@@ -19,37 +19,61 @@
 #define ATA_CMD     0x1F7   /* write: command */
 
 #define ST_BSY  0x80        /* busy */
+#define ST_DF   0x20        /* drive fault */
 #define ST_DRQ  0x08        /* data request ready */
 #define ST_ERR  0x01        /* error */
+
+#define ATA_TIMEOUT 1000000 /* status polls before giving up */
+
+/* While BSY is set the drive owns the status register and its other bits mean
+   nothing, so ERR, DF and DRQ are only looked at once BSY has cleared. */
 
 /* Wait for the drive to be ready to transfer a sector (BSY clear, DRQ set). */
 static int ata_wait(void)
 {
-    for (int i = 0; i < 1000000; i++) {
+    for (int i = 0; i < ATA_TIMEOUT; i++) {
         uint8_t s = inb(ATA_STATUS);
-        if (s & ST_ERR)
+        if (s & ST_BSY)
+            continue;
+        if (s & (ST_ERR | ST_DF))
             return -1;
-        if (!(s & ST_BSY) && (s & ST_DRQ))
+        if (s & ST_DRQ)
             return 0;
     }
     return -1;
 }
 
-static void ata_select(uint32_t lba, uint8_t sectors)
+/* Wait for the drive to finish whatever it is doing (BSY clear). Returns -1 if
+   it reports an error or never finishes. */
+static int ata_idle(void)
 {
-    while (inb(ATA_STATUS) & ST_BSY)
-        ;
+    for (int i = 0; i < ATA_TIMEOUT; i++) {
+        uint8_t s = inb(ATA_STATUS);
+        if (!(s & ST_BSY))
+            return (s & (ST_ERR | ST_DF)) ? -1 : 0;
+    }
+    return -1;
+}
+
+static int ata_select(uint32_t lba, uint8_t sectors)
+{
+    /* Command registers may only be written while the drive is not busy. */
+    for (int i = 0; inb(ATA_STATUS) & ST_BSY; i++)
+        if (i == ATA_TIMEOUT)
+            return -1;
     outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));   /* master + LBA mode + high bits */
     outb(ATA_SECCNT, sectors);
     outb(ATA_LBA_LO,  (uint8_t)(lba & 0xFF));
     outb(ATA_LBA_MID, (uint8_t)((lba >> 8) & 0xFF));
     outb(ATA_LBA_HI,  (uint8_t)((lba >> 16) & 0xFF));
+    return 0;
 }
 
 int ata_read(uint32_t lba, uint8_t sectors, void *buffer)
 {
     uint16_t *buf = (uint16_t *)buffer;
-    ata_select(lba, sectors);
+    if (ata_select(lba, sectors) != 0)
+        return -1;
     outb(ATA_CMD, 0x20);                            /* READ SECTORS */
 
     for (int s = 0; s < sectors; s++) {
@@ -65,21 +89,22 @@ int ata_read(uint32_t lba, uint8_t sectors, void *buffer)
 int ata_write(uint32_t lba, uint8_t sectors, const void *buffer)
 {
     const uint16_t *buf = (const uint16_t *)buffer;
-    ata_select(lba, sectors);
+    if (ata_select(lba, sectors) != 0)
+        return -1;
     outb(ATA_CMD, 0x30);                            /* WRITE SECTORS */
 
     for (int s = 0; s < sectors; s++) {
-        while (inb(ATA_STATUS) & ST_BSY)
-            ;
-        while (!(inb(ATA_STATUS) & ST_DRQ))
-            ;
+        if (ata_wait() != 0)
+            return -1;
         for (int i = 0; i < 256; i++)
             outw(ATA_DATA, buf[i]);
         buf += 256;
     }
 
+    /* The drive goes busy while it commits the last sector. Let it finish
+       (and report how that went) before issuing the next command. */
+    if (ata_idle() != 0)
+        return -1;
     outb(ATA_CMD, 0xE7);                            /* FLUSH CACHE */
-    while (inb(ATA_STATUS) & ST_BSY)
-        ;
-    return 0;
+    return ata_idle();
 }
