@@ -132,6 +132,7 @@ static void cmd_help(void)
     kprint("  vm            address spaces and demand paging\n");
     kprint("  elfinfo <f>   parse and validate a program as ELF\n");
     kprint("  fork          fork, exit and wait between two processes\n");
+    kprint("  cow           one page shared by four processes (copy-on-write)\n");
     kprint("  ps            list the process table\n");
     kprint("  syscall       invoke a system call (int 0x80)\n");
     kprint("  user          run the built-in ring-3 demo\n");
@@ -437,7 +438,7 @@ static void execute(const char *cmd)
         }
 
     } else if (streq(cmd, "fault")) {
-        kprint("  reading unmapped memory at 0x00800000 (above the 4 MB map)...\n");
+        kprint("  reading unmapped memory at 0x00800000 (above the 8 MB map)...\n");
         /* save_context is called directly here so its stack frame survives
            until the fault; fault_arm makes the page-fault handler unwind to it. */
         if (save_context(&fault_recovery_ctx) == 0) {
