@@ -8,6 +8,8 @@
 #include "sync.h"
 #include "task.h"
 
+#include <stdint.h>
+
 /* Atomically set *p to v and return the previous value. xchg carries an
    implicit lock prefix, so this is a safe test-and-set. */
 static inline int atomic_xchg(volatile int *p, int v)
@@ -36,24 +38,37 @@ void mutex_unlock(mutex_t *m) { __asm__ volatile("" ::: "memory"); m->locked = 0
 
 /* --- counting semaphore ---
    The check-and-decrement runs with interrupts disabled so it is atomic even
-   under preemption. */
+   under preemption. The caller's interrupt flag is saved and put back rather
+   than unconditionally set again: a plain sti would switch interrupts on
+   inside an interrupt handler, or in a section that disabled them on purpose. */
+static inline uint32_t irq_save(void)
+{
+    uint32_t flags;
+    __asm__ volatile("pushf\n\tpop %0\n\tcli" : "=r"(flags) :: "memory");
+    return flags;
+}
+static inline void irq_restore(uint32_t flags)
+{
+    __asm__ volatile("push %0\n\tpopf" :: "r"(flags) : "memory", "cc");
+}
+
 void sem_init(semaphore_t *s, int count) { s->count = count; }
 void sem_wait(semaphore_t *s)
 {
     for (;;) {
-        __asm__ volatile("cli");
+        uint32_t flags = irq_save();
         if (s->count > 0) {
             s->count--;
-            __asm__ volatile("sti");
+            irq_restore(flags);
             return;
         }
-        __asm__ volatile("sti");
+        irq_restore(flags);
         task_yield();
     }
 }
 void sem_post(semaphore_t *s)
 {
-    __asm__ volatile("cli");
+    uint32_t flags = irq_save();
     s->count++;
-    __asm__ volatile("sti");
+    irq_restore(flags);
 }
