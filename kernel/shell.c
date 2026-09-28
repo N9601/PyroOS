@@ -212,27 +212,35 @@ static void execute(const char *cmd)
             kprint(vmm_translate(a, v) != vmm_translate(b, v)
                    ? "  (isolated)\n" : "  (SHARED, wrong)\n");
 
-            /* Demand paging: promise 4 MB, commit nothing, then touch it. */
+            /* Demand paging: promise 4 MB in space A, commit nothing, then
+               touch it from inside A. The promise and the frames it pulls in
+               belong to A, so destroying A gives every frame back and the next
+               run starts from the same state. (Made in the kernel's own space,
+               the pages stayed mapped forever and a second run found nothing
+               left to fault on.) */
             uint32_t before = demand_faults_served();
-            demand_region(vmm_kernel_dir(), 0x01000000, 0x01400000,
-                          PF_PRESENT | PF_RW);
-            kprint("  promised 4 MB at 0x01000000, no frames committed\n");
+            demand_region(a, 0x01000000, 0x01400000, PF_PRESENT | PF_RW);
+            kprint("  promised 4 MB at 0x01000000 in space A, no frames committed\n");
+            vmm_switch(a);
             volatile uint32_t *p = (volatile uint32_t *)0x01000000;
             p[0] = 0xC0FFEE;
             p[2048] = 0xBEEF;
             p[4096] = 0xF00D;
+            uint32_t r0 = p[0], r1 = p[2048], r2 = p[4096];
+            vmm_switch(vmm_kernel_dir());
             kprint("  touched 3 pages, faults served ");
             kprint_dec(demand_faults_served() - before);
             kprint(", read back ");
-            kprint_hex(p[0]); kprint(" ");
-            kprint_hex(p[2048]); kprint(" ");
-            kprint_hex(p[4096]); kprint("\n");
-
-            vmm_destroy_dir(a);
-            vmm_destroy_dir(b);
-            kprint("  both spaces freed, frames free now ");
-            kprint_dec(pmm_free_frames()); kprint("\n");
+            kprint_hex(r0); kprint(" ");
+            kprint_hex(r1); kprint(" ");
+            kprint_hex(r2); kprint("\n");
         }
+
+        vmm_destroy_dir(a);     /* either may be 0 if creation failed */
+        vmm_destroy_dir(b);
+        demand_clear();         /* the promise must not outlive space A */
+        kprint("  both spaces freed, frames free now ");
+        kprint_dec(pmm_free_frames()); kprint("\n");
     } else if (streq(cmd, "cow")) {
         /* Fork one parent three times without any child writing, so all four
            processes share the single data page. This shows the reference count
