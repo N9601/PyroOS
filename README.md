@@ -95,7 +95,7 @@ It is not a Linux distribution and does not try to be. It is a real operating-sy
 - Paging with `CR0.PG`; kernel and frame pool identity mapped
 - Physical frame allocator (bitmap) and a virtual memory manager
 - Per-process address spaces: the same virtual address, different frames
-- Processes: fork with a full address-space copy, exit, wait, zombie reaping
+- Processes: fork by copy-on-write address-space cloning, exit, wait, zombie reaping
 - Demand paging: memory committed only when a page is first touched
 - Kernel heap: first-fit `kmalloc` / `kfree` with split and coalesce
 
@@ -159,6 +159,7 @@ vm            address spaces, demand paging  ps    list the process table
 fork          fork, exit and wait between two processes
 cow           one page shared by four processes (copy-on-write)
 elfinfo <f>   parse and validate a program as ELF
+threads       mutex vs race-condition demo (kernel threads)
 ```
 
 ---
@@ -227,7 +228,7 @@ PyroOS/
 │   └── print_pm.asm      Protected-mode VGA printing
 ├── kernel/
 │   ├── kernel.c         kmain: brings up every subsystem
-│   ├── kernel_entry.asm  32-bit entry stub, zeroes .bss, calls kmain
+│   ├── kernel_entry.asm  32-bit entry stub, zeroes .bss, sets up the stack, calls kmain
 │   ├── linker.ld        Links the kernel at 0x10000
 │   ├── screen.c         VGA text driver (cursor, scroll, colors)
 │   ├── idt.c            Interrupt Descriptor Table
@@ -257,6 +258,8 @@ PyroOS/
 ├── user/
 │   ├── prog.c           A well-behaved standalone program
 │   ├── crash.c          A program that tries to corrupt the kernel (gets killed)
+│   ├── rocrash.c        A program that writes to its own read-only code (gets killed)
+│   ├── whoami.c         Asks the kernel for its process id (SYS_GETPID)
 │   ├── ask.c            An interactive program (reads your name, greets you)
 │   ├── calc.c           A calculator
 │   ├── guess.c          A number-guessing game
@@ -293,9 +296,9 @@ PyroOS/
 22. ELF loader: real ELF32 binaries, segment loading, and argc/argv. (done)
 23. Segment protection, copy-on-write fork, frame refcounts, and getpid. (done)
 
-The larger subsystems planned next (per-process virtual memory, a POSIX process
-model, a VFS with FAT32/ext2, PCI and device drivers, a TCP/IP stack, a graphical
-subsystem, SMP, and a 64-bit port) are described in [ROADMAP.md](./ROADMAP.md).
+The larger subsystems planned next (a VFS with FAT32/ext2, PCI and device
+drivers, a TCP/IP stack, a graphical subsystem, SMP, and a 64-bit port) are
+described in [ROADMAP.md](./ROADMAP.md).
 
 ---
 
