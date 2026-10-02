@@ -4,16 +4,19 @@
  *  The layout the program expects on entry, growing downward from the top of
  *  the user stack:
  *
- *      stack_top ->  [ argument text: "exec\0prog.elf\0hello\0" ]
- *                    [ argv[argc] = NULL                        ]
- *                    [ argv[argc-1] ... argv[0]  (pointers)     ]
- *                    [ argv (pointer to the array)              ]
- *      new esp   ->  [ argc                                     ]
+ *      stack_top ->  [ argument text: "prog.elf\0hello\0"   ]
+ *                    [ argv[argc] = NULL                    ]
+ *                    [ argv[argc-1] ... argv[0]  (pointers) ]
+ *                    [ argv (pointer to the array)          ]
+ *                    [ argc                                 ]
+ *      new esp   ->  [ fake return address (0)              ]
  *
- *  So a program reading [esp] finds argc and [esp+4] finds argv, which is the
- *  ordinary cdecl arrangement for a call to main(argc, argv). The strings sit
- *  above the pointers because the pointers have to point at something that will
- *  not be overwritten as the program pushes its own frames.
+ *  So a program finds argc at [esp+4] and argv at [esp+8], which is where a
+ *  cdecl function looks for its first two arguments once it has been called:
+ *  the entry point is an ordinary _start(argc, argv). argv[0] is the program's
+ *  own name, as typed after `exec`. The strings sit above the pointers because
+ *  the pointers have to point at something that will not be overwritten as the
+ *  program pushes its own frames.
  *
  *  Everything is written into the user zone, which ring 3 can read. That is the
  *  point: the program must be able to reach its own arguments without a syscall.
