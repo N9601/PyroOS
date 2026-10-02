@@ -208,7 +208,11 @@ make          # assemble the boot sector, compile the kernel, link the disk imag
 make run      # boot build/os-image.bin in QEMU (GTK window)
 make run-sdl  # same, SDL window (better keyboard forwarding under WSLg)
 make clean    # remove build artifacts
+
+tests/boot_test.sh   # boot headlessly, wait for the shell, run a ring-3 program
 ```
+
+The boot test needs no display: it drives QEMU through its monitor and reads the screen straight out of VGA text memory, so it runs the same in a terminal, over SSH, or in CI.
 
 The build pipeline: the boot sector assembles to a flat 512-byte binary; the C kernel and its assembly stubs compile to ELF objects, link at base `0x10000`, and are flattened with `objcopy`; the two are concatenated into a bootable disk image.
 
@@ -265,6 +269,8 @@ PyroOS/
 │   ├── guess.c          A number-guessing game
 │   ├── note.c           A text editor that saves files to PyroFS
 │   └── prog.ld          Links programs to run at 0x80000
+├── tests/
+│   └── boot_test.sh     Headless boot test (QEMU, no display)
 └── Makefile
 ```
 
