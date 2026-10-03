@@ -1,0 +1,23 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            nasm gcc-multilib xxd qemu-system-x86
+
+      - name: Build the disk image
+        run: make
+
+      - name: Boot it headlessly
+        run: bash tests/boot_test.sh
