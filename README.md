@@ -31,7 +31,7 @@ PyroOS is developed and run inside [QEMU](https://www.qemu.org/), so you never t
 **1. Install the toolchain** (inside WSL/Ubuntu):
 
 ```bash
-sudo apt install nasm qemu-system-x86 build-essential gcc-multilib
+sudo apt install nasm qemu-system-x86 build-essential gcc-multilib xxd
 ```
 
 **2. Build and boot it:**
@@ -201,7 +201,7 @@ Memory map: boot sector at `0x7C00`, kernel at `0x10000` (its 16 KB stack lives 
 
 ## Build
 
-Everything runs inside WSL2 (Ubuntu). Requires `nasm`, `qemu-system-x86`, `build-essential`, and `gcc-multilib`.
+Everything runs inside WSL2 (Ubuntu). Requires `nasm`, `qemu-system-x86`, `build-essential`, `gcc-multilib`, and `xxd` (which embeds the user programs into the kernel as C arrays).
 
 ```bash
 make          # assemble the boot sector, compile the kernel, link the disk image
