@@ -19,6 +19,12 @@ SECTIONS
         *(.text.*)
     }
     .rodata : { *(.rodata) *(.rodata.*) }
+
+    /* Writable data starts on a page of its own. Page permissions are per
+       page, so if .data or .bss shared a page with the code, the linker would
+       have to merge them into one read-write-execute segment and the loader
+       could not make the code read-only. */
+    . = ALIGN(0x1000);
     .data   : { *(.data)   *(.data.*) }
     .bss    : { *(.bss) *(.bss.*) *(COMMON) }
 }
