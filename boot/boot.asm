@@ -25,15 +25,20 @@ KERNEL_SECTORS equ 120      ; how many 512-byte sectors of kernel to load
                             ; (kernel/linker.ld), so change both together.
 
 start:
-    mov [BOOT_DRIVE], dl     ; save BIOS boot drive for later use
-
-    ; Set up real-mode segments and a stack just below our code.
+    ; Set up real-mode segments and a stack before touching memory. The BIOS
+    ; promises nothing about DS or SS on entry, and [org 0x7c00] assumes
+    ; segment 0, so even saving DL has to wait until DS is known. Interrupts
+    ; stay off while SS and SP disagree, so none can push onto a bogus stack.
+    cli
     xor ax, ax
     mov ds, ax
     mov es, ax
     mov ss, ax
-    mov bp, 0x9000          ; put the real-mode stack safely above 0x7C00
-    mov sp, bp
+    mov bp, 0x9000          ; the stack grows down from 0x9000, above this
+    mov sp, bp              ; sector (0x7C00 to 0x7DFF)
+    sti                     ; the BIOS services below need interrupts
+
+    mov [BOOT_DRIVE], dl    ; save BIOS boot drive for later use
 
     mov bx, MSG_REAL_MODE
     call print_string       ; still using BIOS teletype -- we're in real mode
