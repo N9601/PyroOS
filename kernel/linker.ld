@@ -18,13 +18,24 @@
 
 ENTRY(_start)
 
+/* Two program headers instead of the one read-write-execute segment ld would
+   otherwise make (and warn about on every build). The boot sector loads the
+   flat binary, not the ELF, so this does not change a single byte of what
+   runs; it keeps kernel.elf an honest description of it for tools like
+   readelf and gdb. */
+PHDRS
+{
+    text PT_LOAD FLAGS(5);      /* R-X: code and constants */
+    data PT_LOAD FLAGS(6);      /* RW-: initialized data and .bss */
+}
+
 SECTIONS
 {
     . = 0x10000;                /* kernel is loaded and linked at 0x10000 (64 KB) */
 
     .text : {
         *(.text)                /* all code; entry stub comes first by link order */
-    }
+    } :text
 
     .rodata : {
         *(.rodata*)             /* read-only data: our string literals live here */
@@ -32,7 +43,7 @@ SECTIONS
 
     .data : {
         *(.data)                /* initialized global/static data */
-    }
+    } :data
     image_end = .;              /* objcopy's flat binary stops here */
 
     .bss : {
