@@ -28,8 +28,8 @@ void user_exit(void);          /* called by SYS_EXIT to unwind back to kernel */
    memory below 0xA0000. Above it sit the VGA window (0xA0000 to 0xBFFFF, which
    includes the text screen at 0xB8000) and then option and BIOS ROM: writes
    there are dropped or land on the screen. So the heap is the 60 KB from
-   0x90000 up to just below the BIOS data area at 0x9FC00, leaving the 64 KB
-   from USER_LOAD_ADDR for the program image. */
+   0x90000 up to just below the extended BIOS data area at 0x9FC00, leaving
+   the 64 KB from USER_LOAD_ADDR for the program image. */
 #define USER_HEAP_BASE 0x00090000u
 #define USER_HEAP_END  0x0009F000u
 
